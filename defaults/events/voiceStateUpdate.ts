@@ -1,9 +1,8 @@
 import { Event } from "../../types";
-import {VoiceState} from "discord.js";
 
-export const event: Event = {
+export const event: Event<"voiceStateUpdate"> = {
     event: 'voiceStateUpdate',
-    func: (client, logger, oldState:VoiceState, newState: VoiceState) => {
+    func: (client, logger, oldState, newState) => {
         if (!oldState.channelId && newState.channelId) {
             client.emit('joinedVoiceChannel', newState);
         }

@@ -14,13 +14,16 @@ export default async (client: ExtendedClient, commands: CommandsMap, message: Me
         client.logger.info(`Command found: ${command?.name}`);
         if (!command) return;
         if (!command.logger) command.logger = client.logger.child({ fallback: true });
+        const module = client.modules.get(command.module);
+        if (!module) return;
         command.func({
             client: client,
             message: message,
             args: args,
             profile: await client.profileHandler.fetchOrCreate(message.author.id, message.guild.id),
             logger: command.logger as Logger,
-            guild: await client.guildHandler.fetchOrCreate(message.guild.id)
+            guild: await client.guildHandler.fetchOrCreate(message.guild.id),
+            interfacer: module.interfacer
         })
     }
 }

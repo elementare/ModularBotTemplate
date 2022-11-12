@@ -4,6 +4,7 @@ import {SlashCommandBuilder} from "discord.js";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
+        .setDefaultMemberPermissions(8)
         .setName('comer')
         .setDescription('Comer alguém'),
     func: async ({logger, interaction}) => {

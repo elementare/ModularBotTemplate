@@ -1,4 +1,4 @@
-import {CommandArgs, CommandConstructor, CommandsMap} from "../../types";
+import {CommandArgs, CommandConstructor} from "../../types";
 import {Logger} from "winston";
 
 
@@ -9,6 +9,7 @@ export default class Command {
     public readonly howToUse: string;
     public logger?: Logger;
     public readonly func: (args: CommandArgs) => void;
+    public module?: string;
     constructor(params: CommandConstructor) {
         this.name = params.name;
         this.aliases = params.aliases;

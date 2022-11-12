@@ -1,13 +1,14 @@
-import mongoose from "mongoose";
+import mongoose, {Schema} from "mongoose";
 import winston, {Logger} from "winston";
 import {
+    AutocompleteInteraction, ChatInputCommandInteraction,
     Client,
     ClientEvents,
-    Collection, CommandInteraction, GuildMember,
+    Collection, GuildMember,
     Message,
     Role,
     SlashCommandBuilder,
-    VoiceChannel, VoiceState
+    VoiceState
 } from "discord.js";
 import ProfileManager from "./classes/managers/ProfileManager";
 import GuildManager from "./classes/managers/GuildManager"
@@ -30,18 +31,29 @@ interface CommandConstructor {
     func: (args:CommandArgs) => void
 }
 interface SlashCommandConstructor {
-    data: SlashCommandBuilder,
+    data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
     func: (args:SlashCommandArgs) => void,
-    global?: boolean
+    global?: boolean,
+    autoCompleteFunc?: (args: SlashCommandAutoCompleteArgs) => void
 
 }
 
 interface SlashCommandArgs {
     client: ExtendedClient,
     logger: Logger,
-    interaction: CommandInteraction,
+    interaction: ChatInputCommandInteraction,
     profile: User,
-    guild: Guild
+    guild: Guild,
+    interfacer: BaseModuleInterfacer
+}
+
+interface SlashCommandAutoCompleteArgs {
+    client: ExtendedClient,
+    logger: Logger,
+    interaction: AutocompleteInteraction,
+    profile: User,
+    guild: Guild,
+    interfacer: BaseModuleInterfacer
 }
 
 interface ExtendedClient extends Client {
@@ -89,19 +101,33 @@ interface mongoseSchemaData {
     [key: string]: mongoose.SchemaDefinitionProperty
 }
 
-interface manifest {
+interface Manifest {
     name: string,
     description: string,
     version: string,
     color: string,
-    data: {
-        user: Array<[string, { type: string, default?: any, ref?: string }]>,
-        guild: Array<[string, { type: string, default?: any, ref?: string }]>
+    schemaDataFile?: string,
+    data?: {
+        user?: Schema,
+        guild?: Schema
     },
     initFile: string,
     eventsFolder: string,
     commandsFolder: string
 }
+
+interface RawManifest {
+    name: string,
+    description: string,
+    version: string,
+    color: string,
+    schemaDataFile?: string,
+    initFile: string,
+    eventsFolder: string,
+    commandsFolder: string
+}
+
+
 type CommandsMap = {
     slash: Collection<string, SlashCommand>,
     text: Collection<string, Command>
@@ -114,7 +140,7 @@ interface Module {
     color: string,
     logger: winston.Logger,
     initFunc: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer>,
-    data: manifest,
+    data: Manifest,
     commands?: CommandsMap,
     interfacer: BaseModuleInterfacer
 }
@@ -144,9 +170,9 @@ export interface ExtendedClientEvents extends ClientEvents {
 }
 
 
-interface Event {
-    readonly event: keyof ExtendedClientEvents,
-    readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
+interface Event<K extends keyof ExtendedClientEvents> {
+    readonly event: K,
+    readonly func: (client: ExtendedClient, logger: Logger, ...args: ExtendedClientEvents[K]) => void
 }
 
 interface CommandArgs {
@@ -155,5 +181,6 @@ interface CommandArgs {
     message: Message,
     profile: User,
     args: Array,
-    guild: Guild
+    guild: Guild,
+    interfacer: BaseModuleInterfacer
 }

@@ -1,9 +1,8 @@
 import {Event} from "../../types";
-import {GuildMember} from "discord.js";
 
-export const event:Event = {
+export const event:Event<"guildMemberUpdate"> = {
     event: 'guildMemberUpdate',
-    func: (client, logger, oldMember: GuildMember, newMember: GuildMember) => {
+    func: (client, logger, oldMember, newMember) => {
         if (oldMember.roles.cache.size < newMember.roles.cache.size) {
             const role = newMember.roles.cache.find(r => !oldMember.roles.cache.has(r.id));
             if (!role) return;

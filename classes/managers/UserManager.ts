@@ -3,7 +3,7 @@
 import User from '../structs/User'
 import {ExtendedClient} from "../../types";
 import Guild from "../structs/Guild";
-import {Collection, FetchMembersOptions, GuildMember, UserResolvable} from "discord.js";
+import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
 
 async function getGuilds(client: ExtendedClient, guilds: Array<string>): Promise<Array<Guild>> {
     const guildArray = []
@@ -56,7 +56,7 @@ export default class userHandler {
 
     delete(id: string, guild: string) {
         return new Promise(async (resolve, err) => {
-            const userProfile = await this.client.defaultModels.user.findOneAndDelete({id: id})
+            const userProfile = await this.client.defaultModels.user.findOneAndDelete({id: id, guildId: guild})
             if (!userProfile) err('No user profile!')
             resolve(userProfile)
         })

@@ -3,8 +3,8 @@ import * as path from 'path';
 import {Logger} from "winston";
 import {Module, Event, ExtendedClient} from "../types";
 
-async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event>> {
-    let results: Array<Event> = [];
+async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any>>> {
+    let results: Array<Event<any>> = [];
     const list = await fs.promises.readdir(dir);
     logger.info(`Found ${list.length} files in ${dir}`);
     for (const file of list) {
