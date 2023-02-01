@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {Client} from "discord.js";
 import {Logger} from "winston";
-import {Module, Event} from "../types";
+import {Module, Event, ExtendedClient} from "../types";
 
 async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event>> {
     let results: Array<Event> = [];
@@ -24,12 +23,11 @@ async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event>> {
 }
 
 
-export default async (client: Client, module: Module) => {
+export default async (client: ExtendedClient, module: Module) => {
     const files = await findJsFiles(`./modules/${module.name}/${module.data.eventsFolder}`, module.logger);
     for (const file of files) {
         module.logger.notice(`Loading event ${file.event} from module ${module.name}`);
         client.on(file.event, file.func.bind(null, client, module.logger));
-        client.emit('debug', 'Cu')
     }
     module.logger.notice(`Loaded ${files.length} events for module ${module.data.name}`);
 }

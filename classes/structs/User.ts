@@ -1,10 +1,9 @@
-import {Client, GuildMember} from "discord.js";
 import * as discord from "discord.js";
 module.exports = class User {
-    public id: string;
-    public member: discord.GuildMember;
-    public user: discord.User
-    private client: Client;
+    public readonly id: string;
+    public readonly member: discord.GuildMember;
+    public readonly user: discord.User
+    private client: discord.Client;
     private data: any;
     constructor(client: discord.Client, member: discord.GuildMember, data: any) {
         this.id = member.id
@@ -12,6 +11,5 @@ module.exports = class User {
         this.user = member?.user || member
         this.client = client
         this.data = data
-
     }
 }

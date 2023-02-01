@@ -4,7 +4,7 @@
 import * as path from "path";
 import * as fs from 'fs';
 import * as winston from "winston";
-import {loadModules} from "./handlers/module_handler";
+import {loadModules} from "./handlers/moduleHandler";
 import chalk = require("chalk");
 import mongoose, {ConnectOptions} from "mongoose";
 
@@ -57,7 +57,7 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.colorize(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.printf(info => `${chalk.hex(hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
+                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
                 )
             })
         ]
@@ -120,11 +120,15 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     client.profileHandler = new UserHandler(client);
     client.logger = logger;
     logger.info('Profile handler loaded');
-    const {userData, modules, guildData} = await loadModules(logger, client);
+    const {userData, guildData} = await loadModules(logger, client);
     logger.notice('All modules loaded!');
     const userSchema = new mongoose.Schema(userData)
     const guildSchema = new mongoose.Schema(guildData)
     const user = mongoose.model('user', userSchema)
     const guild = mongoose.model('guild', guildSchema)
     logger.notice('MongoDB models updated successfully!')
+    client.defaultModels = {
+        user,
+        guild
+    }
 })

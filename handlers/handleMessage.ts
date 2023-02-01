@@ -1,6 +1,6 @@
-import {Client, Message} from "discord.js";
+import {Message} from "discord.js";
 import {CommandsMap, ExtendedClient} from "../types";
-import {loggers} from "winston";
+import {Logger} from "winston";
 const prefix: string = 'k!';
 export default async (client: ExtendedClient, commands: CommandsMap, message: Message) => {
     if (message.author.bot) return;
@@ -12,12 +12,13 @@ export default async (client: ExtendedClient, commands: CommandsMap, message: Me
         const command = commands.get(commandName);
         client.logger.info(`Command found: ${command?.name}`);
         if (!command) return;
-        await command.func({
+        if (!command.logger) command.logger = client.logger.child({ fallback: true });
+        command.func({
             client: client,
             message: message,
             args: args,
             profile: await client.profileHandler.fetchOrCreate(message.author.id),
-            logger: command.logger
+            logger: command.logger as Logger
         })
     }
 }

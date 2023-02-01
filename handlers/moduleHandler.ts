@@ -1,10 +1,10 @@
 import * as discord from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
-import winston from "winston";
-import {Command, ExtendedClient, manifest, Module, mongoseSchemaData} from "../types";
-import eventHandler from "./event_handler";
-import commandHandler from "./command_handler";
+import winston, {Logger} from "winston";
+import {BaseModuleInterfacer, Command, ExtendedClient, manifest, Module, mongoseSchemaData} from "../types";
+import eventHandler from "./eventHandler";
+import commandHandler from "./commandHandler";
 import messageHandler from './handleMessage'
 import chalk = require("chalk");
 
@@ -108,11 +108,20 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                                 await logger.warning(`Data point ${dataPoint} already exists in user data points`);
                                 continue
                             }
-                            userObj[dataPointName] = {
+                            if (dataPoint[1].type === 'mongoose.types.ObjectId' && !dataPoint[1].ref) throw new Error(`No ref found in user data point "${dataPointName}" in manifest.json in ${folder}`);
+
+                            const a: {
+                                type: any,
+                                required: boolean,
+                                default: any,
+                                ref?: string
+                            } = {
                                 type: eval(dataPoint[1].type),
                                 required: false,
                                 default: dataPoint[1].default
                             }
+                            if (dataPoint[1].ref) a.ref = dataPoint[1].ref;
+                            userObj[dataPointName] = a
                         }
                     }
                     if (manifest.data.guild) {
@@ -125,19 +134,28 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                                 await logger.warning(`Data point ${dataPoint} already exists in guild data points`);
                                 continue
                             }
-                            guildObj[dataPointName] = {
+                            if (dataPoint[1].type === 'mongoose.types.ObjectId' && !dataPoint[1].ref) throw new Error(`No ref found in guild data point "${dataPointName}" in manifest.json in ${folder}`);
+
+                            const a: {
+                                type: any,
+                                required: boolean,
+                                default: any,
+                                ref?: string
+                            } = {
                                 type: eval(dataPoint[1].type),
                                 required: false,
                                 default: dataPoint[1].default
                             }
+                            if (dataPoint[1].ref) a.ref = dataPoint[1].ref;
+                            guildObj[dataPointName] = a
                         }
                     }
                     await logger.notice(`Loaded manifest.json in ${folder}`);
                     const initFilePath = path.join(folderPath, manifest.initFile);
                     fs.readFileSync(initFilePath, 'utf8')
-                    const init = require(`../modules/${folder}/${manifest.initFile}`);
+                    const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer> = require(`../modules/${folder}/${manifest.initFile}`);
                     const moduleLogger = createLogger(manifest.name, manifest.color);
-                    await init(client, moduleLogger).then(async () => {
+                    await init(client, moduleLogger).then(async (Class) => {
                         await logger.notice(`Module ${manifest.name} loaded`);
                         const module: Module = {
                             name: manifest.name,
@@ -148,19 +166,19 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                             initFunc: init,
                             data: manifest,
                             commands: undefined,
+                            interfacer: Class
                         }
-                        modules.set(manifest.name, module)
                         // Module instanciated, now load commands and events
                         if (manifest.eventsFolder) {
                             await eventHandler(client, module);
                         }
                         if (manifest.commandsFolder) {
                             module.commands = await commandHandler(client, module);
-                            modules.set(manifest.name, module)
                             for (const command of module.commands) {
                                 commands.set(command[1].name, command[1]);
                             }
                         }
+                        modules.set(manifest.name, module)
                     })
                 }
             }
@@ -170,6 +188,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         client.commands = commands;
         client.modules = modules;
         client.on('messageCreate', messageHandler.bind(null, client, commands));
+
         await logger.notice('Commands setup');
     });
     await sleep(500)

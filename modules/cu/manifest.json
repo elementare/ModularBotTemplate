@@ -1,0 +1,17 @@
+{
+  "name": "cu",
+  "description": "cu",
+  "version": "1.0.0",
+  "data": {
+    "user": [
+      ["aaa", {
+        "type": "Number",
+        "default": 0
+      }]
+    ]
+  },
+  "initFile": "index.ts",
+  "color": "#5500aa",
+  "eventsFolder": "events",
+  "commandsFolder":"commands"
+}

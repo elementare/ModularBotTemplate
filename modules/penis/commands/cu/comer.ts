@@ -1,7 +1,7 @@
 import {Command} from "../../../../types";
 
 export const command: Command = {
-    name: 'comer',
+    name: 'AAAAAAAAAAAAAAA',
     aliases: [],
     description: 'Comer alguém',
     howToUse: 'comer',
