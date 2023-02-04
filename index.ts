@@ -105,6 +105,7 @@ const client = new discord.Client({intents: 131071});
 require('dotenv').config();
 import UserHandler from "./classes/managers/UserManager";
 import GuildHandler from "./classes/managers/GuildManager";
+import SlashManager from "./classes/managers/SlashManager";
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     logger.notice('Connecting to MongoDB...');
@@ -119,6 +120,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     });
     client.profileHandler = new UserHandler(client);
     client.guildHandler = new GuildHandler(client);
+    client.slashHandler = new SlashManager(client);
     client.logger = logger;
     logger.info('Profile handler and Guild Handler loaded');
     const {userData, guildData} = await loadModules(logger, client);

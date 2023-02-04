@@ -7,7 +7,7 @@ import SlashCommand from "../classes/structs/SlashCommand";
 
 const fs = require('fs');
 
-async function findJsFiles(dir: string, logger: Logger): Promise<{ slash: Array<SlashCommand>, text: Array<Command>}> {
+async function findJsFiles(dir: string, logger: Logger, commandLogger: Logger): Promise<{ slash: Array<SlashCommand>, text: Array<Command>}> {
     let textCommands: Array<Command> = [];
     let slashCommands: Array<SlashCommand> = [];
     const list = await fs.promises.readdir(dir);
@@ -17,17 +17,17 @@ async function findJsFiles(dir: string, logger: Logger): Promise<{ slash: Array<
         const stat = await fs.promises.stat(filePath);
         if (stat.isDirectory()) {
             logger.info(`Found directory ${file} in ${dir}`);
-            const { text, slash } = await findJsFiles(filePath, logger)
+            const { text, slash } = await findJsFiles(filePath, logger, commandLogger)
             textCommands = textCommands.concat(text);
             slashCommands = slashCommands.concat(slash);
         } else if (path.extname(filePath) === '.ts') {
             logger.info(`Found command file ${filePath}`);
             const file: Command | SlashCommand = await import(filePath).then(file => file.default);
             if (file instanceof Command) {
-                file.logger = logger;
+                file.logger = commandLogger;
                 textCommands.push(file);
             } else {
-                file.logger = logger;
+                file.logger = commandLogger;
                 slashCommands.push(file);
             }
         }
@@ -36,9 +36,9 @@ async function findJsFiles(dir: string, logger: Logger): Promise<{ slash: Array<
 }
 
 export default async (client: Client, module: Module):Promise<CommandsMap> => {
-    module.logger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
     if (module.name === 'Default') {
-        const {text, slash} = await findJsFiles(`./defaults/commands`, module.logger);
+        const {text, slash} = await findJsFiles(`./defaults/commands`, module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' }),module.logger);
+        module.logger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
         const commands = {
             slash: new Collection<string, SlashCommand>(),
             text: new Collection<string, Command>()
@@ -56,7 +56,8 @@ export default async (client: Client, module: Module):Promise<CommandsMap> => {
         }
         return commands;
     } else {
-        const {text, slash} = await findJsFiles(`./modules/${module.folderName}/${module.data.commandsFolder}`, module.logger);
+        const {text, slash} = await findJsFiles(`./modules/${module.folderName}/${module.data.commandsFolder}`, module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' }), module.logger);
+        module.logger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
         const commands = {
             slash: new Collection<string, SlashCommand>(),
             text: new Collection<string, Command>()

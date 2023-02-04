@@ -6,10 +6,12 @@ export const event:Event = {
     func: (client, logger, oldMember: GuildMember, newMember: GuildMember) => {
         if (oldMember.roles.cache.size < newMember.roles.cache.size) {
             const role = newMember.roles.cache.find(r => !oldMember.roles.cache.has(r.id));
+            if (!role) return;
             client.emit('roleAdded', newMember, role);
         }
         if (oldMember.roles.cache.size > newMember.roles.cache.size) {
             const role = oldMember.roles.cache.find(r => !newMember.roles.cache.has(r.id));
+            if (!role) return;
             client.emit('roleRemoved', newMember, role);
         }
         if (newMember.guild.roles.premiumSubscriberRole) {

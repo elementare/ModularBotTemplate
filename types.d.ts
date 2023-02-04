@@ -3,7 +3,7 @@ import winston, {Logger} from "winston";
 import {
     Client,
     ClientEvents,
-    Collection, CommandInteraction,
+    Collection, CommandInteraction, GuildMember,
     Message,
     Role,
     SlashCommandBuilder,
@@ -121,11 +121,11 @@ interface Module {
 
 export interface ExtendedClientEvents extends ClientEvents {
     roleAdded: [
-        member: User,
+        member: GuildMember,
         role: Role
     ];
     roleRemoved: [
-        member: User,
+        member: GuildMember,
         role: Role
     ];
     joinedVoiceChannel: [
@@ -139,14 +139,14 @@ export interface ExtendedClientEvents extends ClientEvents {
         newState: VoiceState
     ];
     newBoosterMember: [
-        member: User
+        member: GuildMember
     ];
 }
 
 
 interface Event {
     readonly event: keyof ExtendedClientEvents,
-    readonly func: (client: Client, logger: Logger, ...args: any[]) => void
+    readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
 }
 
 interface CommandArgs {

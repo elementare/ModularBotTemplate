@@ -9,5 +9,6 @@ export default new SlashCommand({
     func: async ({logger, interaction}) => {
         logger.notice(`Comer command executed`);
         await interaction.reply('Comer command executed');
-    }
+    },
+    global: true
 })
