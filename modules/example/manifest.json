@@ -1,0 +1,17 @@
+{
+  "name": "Example",
+  "description": "Modulo de exemplo",
+  "version": "1.0.0",
+  "data": {
+    "user": [
+      ["exemplo", {
+        "type": "Number",
+        "default": 0
+      }]
+    ]
+  },
+  "initFile": "index.ts",
+  "color": "#ffaaff",
+  "eventsFolder": "events",
+  "commandsFolder":"commands"
+}
