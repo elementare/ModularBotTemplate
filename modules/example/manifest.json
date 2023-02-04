@@ -1,10 +1,10 @@
 {
-  "name": "penis",
-  "description": "cu",
+  "name": "Example",
+  "description": "Modulo de exemplo",
   "version": "1.0.0",
   "data": {
     "user": [
-      ["qntsVezesDeuOCu", {
+      ["exemplo", {
         "type": "Number",
         "default": 0
       }]

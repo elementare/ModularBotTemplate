@@ -4,13 +4,13 @@ import {BaseModuleInterfacer} from "../../types";
 
 
 module.exports = async (client: Client, logger: Logger): Promise<BaseModuleInterfacer> => {
-    logger.notice(`Initializing module penis`);
-    return new class cu implements BaseModuleInterfacer {
+    logger.notice(`Initializing module`);
+    return new class Interfacer implements BaseModuleInterfacer {
         constructor(logger: Logger) {
-            logger.notice(`penis module initialized`);
+            logger.notice(`Interfacer initialized`);
         }
 
-        async cu(message: string): Promise<string> {
+        async msg(message: string): Promise<string> {
             return message;
         }
     }(logger);

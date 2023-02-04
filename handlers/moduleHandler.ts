@@ -2,11 +2,12 @@ import * as discord from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
 import winston, {Logger} from "winston";
-import {BaseModuleInterfacer, Command, ExtendedClient, manifest, Module, mongoseSchemaData} from "../types";
+import {BaseModuleInterfacer, CommandsMap, ExtendedClient, manifest, Module, mongoseSchemaData} from "../types";
 import eventHandler from "./eventHandler";
 import commandHandler from "./commandHandler";
 import messageHandler from './handleMessage'
-import chalk = require("chalk");
+import SlashCommand from "../classes/structs/SlashCommand";
+import Command from "../classes/structs/Command";
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -17,60 +18,13 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
     guildData: mongoseSchemaData,
     modules: discord.Collection<string, Module>
 }> {
-    function createLogger(service: string, hexColor: string): winston.Logger {
-        return winston.createLogger({
-            levels: winston.config.syslog.levels,
-            level: 'debug',
-            defaultMeta: {service: service},
-            transports: [
-                new winston.transports.File({
-                    filename: 'logs/error-complete.log',
-                    level: 'error',
-                    format: winston.format.combine(
-                        winston.format.json(),
-                        winston.format.label({label: path.basename(module.filename)}),
-                        winston.format.timestamp()
-                    )
-                }),
-                new winston.transports.File({
-                    filename: 'logs/complete.log',
-                    format: winston.format.combine(
-                        winston.format.json(),
-                        winston.format.label({label: path.basename(module.filename)}),
-                        winston.format.timestamp()
-                    )
-                }),
-                new winston.transports.File({
-                    filename: 'logs/error-modules.log',
-                    level: 'error',
-                    format: winston.format.combine(
-                        winston.format.json(),
-                        winston.format.label({label: path.basename(module.filename)}),
-                        winston.format.timestamp()
-                    )
-                }),
-                new winston.transports.File({
-                    filename: 'logs/modules.log',
-                    format: winston.format.combine(
-                        winston.format.json(),
-                        winston.format.label({label: path.basename(module.filename)}),
-                        winston.format.timestamp()
-                    )
-                }),
-                new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize(),
-                        winston.format.label({label: path.basename(module.filename)}),
-                        winston.format.printf(info => `${chalk.hex(hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
-                    )
-                })
-            ]
-        });
+    const guildObj: mongoseSchemaData = {
+        id: {type: String, required: true}
     }
-
-
-    const guildObj: mongoseSchemaData = {}
-    const userObj: mongoseSchemaData = {}
+    const userObj: mongoseSchemaData = {
+        id: {type: String, required: true},
+        guildId: {type: String, required: true}
+    }
 
     await logger.notice('Loading modules...');
     const modulesPath = path.join('./modules');
@@ -83,7 +37,10 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         }
         await logger.notice(`Found ${folders.length} modules`);
         // Modules Setup
-        let commands = new Map<string, Command>();
+        let commands = {
+            slash: new discord.Collection<string, SlashCommand>(),
+            text: new discord.Collection<string, Command>()
+        }
         for (const folder of folders) {
             await logger.notice(`Loading module folder ${folder}`);
             const folderPath = path.join(modulesPath, folder);
@@ -154,11 +111,12 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                     const initFilePath = path.join(folderPath, manifest.initFile);
                     fs.readFileSync(initFilePath, 'utf8')
                     const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer> = require(`../modules/${folder}/${manifest.initFile}`);
-                    const moduleLogger = createLogger(manifest.name, manifest.color);
+                    const moduleLogger = logger.child({service: manifest.name, hexColor: manifest.color});
                     await init(client, moduleLogger).then(async (Class) => {
                         await logger.notice(`Module ${manifest.name} loaded`);
                         const module: Module = {
                             name: manifest.name,
+                            folderName: folder,
                             description: manifest.description,
                             version: manifest.version,
                             color: manifest.color,
@@ -173,9 +131,12 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                             await eventHandler(client, module);
                         }
                         if (manifest.commandsFolder) {
-                            module.commands = await commandHandler(client, module);
-                            for (const command of module.commands) {
-                                commands.set(command[1].name, command[1]);
+                            module.commands = await commandHandler(client, module) as CommandsMap
+                            for (const command of module.commands.text) {
+                                commands.text.set(command[1].name, command[1]);
+                            }
+                            for (const command of module.commands.slash) {
+                                commands.slash.set(command[1].data.name, command[1]);
                             }
                         }
                         modules.set(manifest.name, module)
@@ -185,11 +146,54 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         }
         await logger.notice('Modules loaded');
         await logger.notice('Setting up commands...');
+        await logger.notice(`Text commands List: ${commands.text.map((command) => `${command.name}`).join(', ')}`)
+        await logger.notice(`Slash commands List: ${commands.slash.map((command) => `${command.data.name}`).join(', ')}`)
         client.commands = commands;
         client.modules = modules;
         client.on('messageCreate', messageHandler.bind(null, client, commands));
+        await logger.notice('Commands and modules setup, loading defaults...');
+        const defaultModuleInterfacer = new class Interfacer implements BaseModuleInterfacer {
 
-        await logger.notice('Commands setup');
+        }()
+
+        const defaultModule: Module = {
+            name: 'Default',
+            folderName: 'default',
+            description: 'Default module',
+            version: '1.0.0',
+            color: '#000000',
+            logger: logger.child({service: 'Default', hexColor: '#000000'}),
+            data: {
+                name: 'Default',
+                description: 'Default module',
+                version: '1.0.0',
+                color: '#000000',
+                initFile: 'init.js',
+                commandsFolder: 'commands',
+                eventsFolder: 'events',
+                data: {
+                    user: [],
+                    guild: []
+                }
+            },
+            commands: undefined,
+            interfacer: defaultModuleInterfacer,
+            initFunc: async (client: ExtendedClient, logger: Logger) => {
+                return defaultModuleInterfacer
+            }
+        }
+        await eventHandler(client, defaultModule);
+        defaultModule.commands = await commandHandler(client, defaultModule) as CommandsMap
+        for (const command of defaultModule.commands.text) {
+            commands.text.set(command[1].name, command[1]);
+        }
+        for (const command of defaultModule.commands.slash) {
+            commands.slash.set(command[1].data.name, command[1]);
+        }
+        await logger.notice('Defaults loaded');
+        await logger.notice('Registering global commands...');
+        await client.slashHandler.registerGlobalCommands();
+        await logger.notice('Global commands registered');
     });
     await sleep(500)
     return {

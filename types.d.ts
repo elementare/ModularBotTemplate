@@ -1,12 +1,47 @@
 import mongoose from "mongoose";
 import winston, {Logger} from "winston";
-import {Client, ClientEvents, Collection, Message, Role, VoiceChannel} from "discord.js";
-import ProfileManager from "./managers/ProfileManager";
+import {
+    Client,
+    ClientEvents,
+    Collection, CommandInteraction,
+    Message,
+    Role,
+    SlashCommandBuilder,
+    VoiceChannel, VoiceState
+} from "discord.js";
+import ProfileManager from "./classes/managers/ProfileManager";
+import GuildManager from "./classes/managers/GuildManager"
 import User from "./classes/structs/User";
 import {Awaitable} from "@discordjs/util";
+import Guild from "./classes/structs/Guild";
+import Command from "./classes/structs/Command";
+import SlashCommand from "./classes/structs/SlashCommand";
+import SlashManager from "./classes/managers/SlashManager";
 
 class BaseModuleInterfacer {
     [key: string]: any;
+}
+
+interface CommandConstructor {
+    name: string,
+    aliases: Array<string>,
+    description: string,
+    howToUse: string,
+    func: (args:CommandArgs) => void
+}
+interface SlashCommandConstructor {
+    data: SlashCommandBuilder,
+    func: (args:SlashCommandArgs) => void,
+    global?: boolean
+
+}
+
+interface SlashCommandArgs {
+    client: ExtendedClient,
+    logger: Logger,
+    interaction: CommandInteraction,
+    profile: User,
+    guild: Guild
 }
 
 interface ExtendedClient extends Client {
@@ -14,10 +49,15 @@ interface ExtendedClient extends Client {
     commands: CommandsMap;
 
     profileHandler: ProfileManager;
+
+    guildHandler: GuildManager;
+
+    slashHandler: SlashManager;
+
     modules: Collection<string, Module>,
     defaultModels: {
-        user: mongoose.Model,
-        guild: mongoose.Model
+        user: mongoose.Model<any>,
+        guild: mongoose.Model<any>
     }
 
     on<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
@@ -62,9 +102,13 @@ interface manifest {
     eventsFolder: string,
     commandsFolder: string
 }
-type CommandsMap = Map<string, Command>
+type CommandsMap = {
+    slash: Collection<string, SlashCommand>,
+    text: Collection<string, Command>
+}
 interface Module {
     name: string,
+    folderName: string,
     description: string,
     version: string,
     color: string,
@@ -85,17 +129,14 @@ export interface ExtendedClientEvents extends ClientEvents {
         role: Role
     ];
     joinedVoiceChannel: [
-        member: User,
-        channel: VoiceChannel
+        state: VoiceState
     ];
     leftVoiceChannel: [
-        member: User,
-        channel: VoiceChannel
+        state: VoiceState
     ];
     movedVoiceChannel: [
-        member: User,
-        oldChannel: VoiceChannel,
-        newChannel: VoiceChannel
+        oldState: VoiceState,
+        newState: VoiceState
     ];
     newBoosterMember: [
         member: User
@@ -113,16 +154,6 @@ interface CommandArgs {
     logger: Logger,
     message: Message,
     profile: User,
-    args: Array
-}
-
-interface Command {
-    readonly name: string,
-    readonly aliases: Array<string>,
-    readonly description: string,
-    readonly howToUse: string,
-
-    logger?: Logger,
-    readonly func:([any]:CommandArgs) => void
-
+    args: Array,
+    guild: Guild
 }

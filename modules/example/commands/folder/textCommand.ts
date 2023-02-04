@@ -1,7 +1,7 @@
-import {Command} from "../../../../types";
+import Command from "../../../../classes/structs/Command";
 
-export const command: Command = {
-    name: 'AAAAAAAAAAAAAAA',
+export default new Command({
+    name: 'comer',
     aliases: [],
     description: 'Comer alguém',
     howToUse: 'comer',
@@ -9,4 +9,4 @@ export const command: Command = {
         logger.notice(`Comer command executed`);
         await message.reply('Comer command executed');
     }
-}
+})

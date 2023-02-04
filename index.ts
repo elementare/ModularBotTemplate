@@ -17,7 +17,6 @@ function createLogger(service: string, hexColor: string): winston.Logger {
     return winston.createLogger({
         levels: winston.config.syslog.levels,
         level: 'debug',
-        defaultMeta: {service: service},
         transports: [
             new winston.transports.File({
                 filename: 'logs/error-complete.log',
@@ -57,11 +56,11 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.colorize(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
+                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(info.hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
                 )
             })
         ]
-    });
+    }).child({service: service, hexColor: hexColor});
 }
 
 const logger = createLogger('Main', '#aa00ff');
@@ -105,6 +104,7 @@ const discord = require("discord.js");
 const client = new discord.Client({intents: 131071});
 require('dotenv').config();
 import UserHandler from "./classes/managers/UserManager";
+import GuildHandler from "./classes/managers/GuildManager";
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     logger.notice('Connecting to MongoDB...');
@@ -118,8 +118,9 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
         throw new Error(err);
     });
     client.profileHandler = new UserHandler(client);
+    client.guildHandler = new GuildHandler(client);
     client.logger = logger;
-    logger.info('Profile handler loaded');
+    logger.info('Profile handler and Guild Handler loaded');
     const {userData, guildData} = await loadModules(logger, client);
     logger.notice('All modules loaded!');
     const userSchema = new mongoose.Schema(userData)

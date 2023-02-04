@@ -4,10 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "start": "node index.ts",
-    "iniciar": "node index.ts",
-    "instalar": "npm install",
-    "configurar": "node deploy_commands.js"
+    "start": "node-ts index.ts"
   },
   "author": "Plary",
   "license": "ISC",
