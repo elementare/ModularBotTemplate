@@ -1,12 +1,37 @@
 import Command from "../../../../classes/structs/Command";
+import {inspect} from "util";
 
 export default new Command({
-    name: 'comer',
+    name: 'eval',
     aliases: [],
     description: 'Comer alguém',
     howToUse: 'comer',
-    func: async ({logger, message}) => {
+    func: async ({logger, message, args, client}) => {
+        if (!message.member) return message.reply('This command can only be used in a guild');
         logger.notice(`Comer command executed`);
-        await message.reply('Comer command executed');
+        let code = args.join(" ").replace(/```(js)?/g, '')
+        if (!code) return message.reply('Please Provide Some Code to Evaluate!');
+        const user = await client.profileHandler.fetch(message.member.id)
+        code = "(async () => {" + code + "})()"
+        try {
+            const waitFn = (ev: string) => {
+                return new Promise(async (resolve) => {
+                    const a = new Function('resolve', 'client', 'message', 'user', ev)
+                    a(resolve, client, message, user)
+                });
+
+            };
+            console.log(code)
+            const result = await waitFn(code);
+            let output = result;
+            if (typeof result !== 'string') {
+                output = inspect(result);
+            }
+            output = '```js\n' + output + '\n```';
+            await message.reply({content: output + ''});
+        } catch (error) {
+            console.log(error)
+            message.channel.send({content: ':x: Aconteceu algum erro'}); // returns message if error
+        }
     }
 })

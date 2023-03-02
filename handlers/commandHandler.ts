@@ -38,41 +38,40 @@ async function findJsFiles(dir: string, logger: Logger, commandLogger: Logger, m
 }
 
 export default async (client: Client, module: Module):Promise<CommandsMap> => {
+    const commandLogger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
     if (module.name === 'Default') {
-        const {text, slash} = await findJsFiles(`./defaults/commands`, module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' }),module.logger, 'Default');
-        module.logger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
+        const {text, slash} = await findJsFiles(`./defaults/commands`, commandLogger,module.logger, 'Default');
         const commands = {
             slash: new Collection<string, SlashCommand>(),
             text: new Collection<string, Command>()
         }
         for (const file of text) {
-            module.logger.info(`Loading command ${file.name} from Defaults`);
+            commandLogger.info(`Loading command ${file.name} from Defaults`);
             commands.text.set(file.name, file);
             for (const alias of file.aliases) {
                 commands.text.set(alias, file);
             }
         }
         for (const file of slash) {
-            module.logger.info(`Loading slash command ${file.data.name} from Defaults`);
+            commandLogger.info(`Loading slash command ${file.data.name} from Defaults`);
             commands.slash.set(file.data.name, file);
         }
         return commands;
     } else {
-        const {text, slash} = await findJsFiles(`./modules/${module.folderName}/${module.data.commandsFolder}`, module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' }), module.logger, module.name);
-        module.logger = module.logger.child({ service: 'Command Loader', hexColor: '#CCAAFF' });
+        const {text, slash} = await findJsFiles(`./modules/${module.folderName}/${module.data.commandsFolder}`, commandLogger, module.logger, module.name);
         const commands = {
             slash: new Collection<string, SlashCommand>(),
             text: new Collection<string, Command>()
         }
         for (const file of text) {
-            module.logger.info(`Loading command ${file.name} from module ${module.name}`);
+            commandLogger.info(`Loading command ${file.name} from module ${module.name}`);
             commands.text.set(file.name, file);
             for (const alias of file.aliases) {
                 commands.text.set(alias, file);
             }
         }
         for (const file of slash) {
-            module.logger.info(`Loading slash command ${file.data.name} from module ${module.name}`);
+            commandLogger.info(`Loading slash command ${file.data.name} from module ${module.name}`);
             commands.slash.set(file.data.name, file);
         }
         return commands;

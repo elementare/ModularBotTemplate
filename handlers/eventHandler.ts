@@ -24,20 +24,21 @@ async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any
 
 
 export default async (client: ExtendedClient, module: Module) => {
+    const eventLogger = module.logger.child({ service: 'Event Loader', hexColor: '#CCAAFF' });
     if (module.name === 'Default') {
-        const files = await findJsFiles(`./defaults/events`, module.logger.child({ service: 'Event Loader', hexColor: '#CCAAFF' }));
+        const files = await findJsFiles(`./defaults/events`, eventLogger);
         for (const file of files) {
-            module.logger.notice(`Loading event ${file.event} from Defaults`);
+            eventLogger.info(`Loading event ${file.event} from Defaults`);
             client.on(file.event, file.func.bind(null, client, module.logger));
         }
-        module.logger.notice(`Loaded ${files.length} events for module ${module.data.name}`);
+        eventLogger.notice(`Loaded ${files.length} default events`);
     } else {
-        const files = await findJsFiles(`./modules/${module.folderName}/${module.data.eventsFolder}`, module.logger.child({ service: 'Event Loader', hexColor: '#CCAAFF' }));
+        const files = await findJsFiles(`./modules/${module.folderName}/${module.data.eventsFolder}`, eventLogger);
         for (const file of files) {
-            module.logger.notice(`Loading event ${file.event} from module ${module.name}`);
+            eventLogger.info(`Loading event ${file.event} from module ${module.name}`);
             client.on(file.event, file.func.bind(null, client, module.logger));
         }
-        module.logger.notice(`Loaded ${files.length} events for module ${module.data.name}`);
+        eventLogger.info(`Loaded ${files.length} events for module ${module.data.name}`);
     }
 
 }

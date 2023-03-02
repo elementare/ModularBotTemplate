@@ -4,7 +4,162 @@
   "version": "1.0.0",
   "schemaDataFile": "schemas.ts",
   "initFile": "index.ts",
+  "configUpdateFile": "configUpdate.ts",
   "color": "#ffaaff",
   "eventsFolder": "events",
-  "commandsFolder":"commands"
+  "commandsFolder": "commands",
+  "settings": [
+    {
+      "name": "example",
+      "id": "example",
+      "type": "text",
+      "description": "Exemplo de configuração",
+      "default": "Exemplo"
+    },
+    {
+      "name": "example2",
+      "id": "example2",
+      "type": "number",
+      "description": "Exemplo de configuração 2",
+      "default": 0
+    },
+    {
+      "name": "example3",
+      "id": "example3",
+      "type": "boolean",
+      "description": "Exemplo de configuração 3",
+      "default": false
+    },
+    {
+      "name": "example3",
+      "id": "example30",
+      "type": "user",
+      "description": "Exemplo de configuração 3"
+    },
+    {
+      "name": "example4",
+      "id": "example4",
+      "type": "select",
+      "description": "Exemplo de configuração 4",
+      "max": 0,
+      "min": 2,
+      "default": [
+        "1"
+      ],
+      "options": [
+        {
+          "name": "Opção 1",
+          "id": "1"
+        },
+        {
+          "name": "Opção 2",
+          "id": "2"
+        },
+        {
+          "name": "Opção 3",
+          "id": "3"
+        }
+      ]
+    },
+    {
+      "name": "example5",
+      "id": "example5",
+      "type": "select",
+      "description": "Exemplo de configuração 5",
+      "max": 2,
+      "min": 2,
+      "default": [
+        "1",
+        "2"
+      ],
+      "options": [
+        {
+          "name": "Opção 1",
+          "id": "1"
+        },
+        {
+          "name": "Opção 2",
+          "id": "2"
+        },
+        {
+          "name": "Opção 3",
+          "id": "3"
+        }
+      ]
+    },
+    {
+      "name": "example6",
+      "id": "example6",
+      "type": "object",
+      "description": "Exemplo de configuração 6",
+      "structure": [
+        {
+          "name": "example6_1",
+          "id": "example6_1",
+          "type": "text",
+          "description": "Exemplo de configuração 6.1"
+        },
+        {
+          "name": "example6_2",
+          "id": "example6_2",
+          "type": "number",
+          "description": "Exemplo de configuração 6.2"
+        },
+        {
+          "name": "example6_3",
+          "id": "example6_3",
+          "type": "boolean",
+          "description": "Exemplo de configuração 6.3"
+        }
+      ],
+      "default": [
+        {
+          "id": "example6_1",
+          "value": "Exemplo"
+        }
+      ]
+    },
+    {
+        "name": "example7",
+        "id": "example7",
+        "type": "list",
+        "description": "Exemplo de configuração 7",
+        "structure": [
+            {
+            "name": "example7_1",
+            "id": "example7_1",
+            "type": "text",
+            "description": "Exemplo de configuração 7.1"
+            },
+            {
+            "name": "example7_2",
+            "id": "example7_2",
+            "type": "number",
+            "description": "Exemplo de configuração 7.2"
+            },
+            {
+            "name": "example7_3",
+            "id": "example7_3",
+            "type": "boolean",
+            "description": "Exemplo de configuração 7.3"
+            }
+        ],
+        "default": [
+          [
+            {
+              "id": "example7_1",
+              "value": "Exemplo"
+            },
+            {
+              "id": "example7_2",
+              "value": 0
+            },
+            {
+              "id": "example7_3",
+              "value": false
+            }
+          ]
+        ]
+    }
+  ]
 }

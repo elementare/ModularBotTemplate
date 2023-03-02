@@ -5,7 +5,7 @@ import winston, {Logger} from "winston";
 import {
     BaseModuleInterfacer,
     CommandsMap,
-    ExtendedClient,
+    ExtendedClient, GenericOption,
     Manifest,
     Module,
     mongoseSchemaData,
@@ -13,8 +13,10 @@ import {
 } from "../types";
 import eventHandler from "./eventHandler";
 import commandHandler from "./commandHandler";
+import settingsHandler from "./settingsHandler";
 import SlashCommand from "../classes/structs/SlashCommand";
 import Command from "../classes/structs/Command";
+import {Schema} from "mongoose";
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -26,7 +28,8 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
     modules: discord.Collection<string, Module>
 }> {
     const guildObj: mongoseSchemaData = {
-        id: {type: String, required: true}
+        id: {type: String, required: true},
+        settings: [{ id: {type: String, required: true}, value: {type: String, required: true} }]
     }
     const userObj: mongoseSchemaData = {
         id: {type: String, required: true},
@@ -59,7 +62,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 if (!rawManifest.version) throw new Error(`No version found in manifest.json in ${folder}`);
                 if (!rawManifest.color) throw new Error(`No color found in manifest.json in ${folder}`);
                 if (!rawManifest.eventsFolder && !rawManifest.commandsFolder) throw new Error(`No commands or events found in manifest.json in ${folder}`);
-                const manifest: Manifest = rawManifest
+                const partialManifest: Partial<Manifest> = rawManifest
                 if (rawManifest.schemaDataFile) {
                     const imports = await import(`../modules/${folder}/${rawManifest.schemaDataFile}`);
                     if (imports.user) {
@@ -68,8 +71,13 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                     if (imports.guild) {
                         guildObj[rawManifest.name] = imports.guild;
                     }
-                    manifest.data = imports;
+                    partialManifest.data = imports;
                 }
+                if (rawManifest.settings) {
+                    partialManifest.settings = await settingsHandler(client, rawManifest.settings, logger.child({ service: `Settings loader`, hexColor: `#ffff00` }), partialManifest, folder);
+
+                }
+                const manifest = partialManifest as Manifest;
                 await logger.notice(`Loaded manifest.json sucessfully in ${folder}`);
                 if (manifest.data?.user) {
                     userObj[manifest.name] = manifest.data.user;
@@ -82,7 +90,6 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer> = require(`../modules/${folder}/${manifest.initFile}`);
                 const moduleLogger = logger.child({service: manifest.name, hexColor: manifest.color});
                 await init(client, moduleLogger).then(async (Class) => {
-                    await logger.notice(`Module ${manifest.name} loaded`);
                     const module: Module = {
                         name: manifest.name,
                         folderName: folder,
@@ -93,7 +100,8 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                         initFunc: init,
                         data: manifest,
                         commands: undefined,
-                        interfacer: Class
+                        interfacer: Class,
+                        settings: manifest.settings as GenericOption[]
                     }
                     // Module instanciated, now load commands and events
                     if (manifest.eventsFolder) {
@@ -109,6 +117,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                         }
                     }
                     modules.set(manifest.name, module)
+                    await logger.notice(`Module ${manifest.name} loaded`);
                 })
             }
         }
@@ -118,7 +127,6 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         await logger.notice(`Slash commands List: ${commands.slash.map((command) => `${command.data.name}`).join(', ')}`)
         client.commands = commands;
         client.modules = modules;
-        // client.on('messageCreate', messageHandler.bind(null, client, commands));
         await logger.notice('Commands and modules setup, loading defaults...');
         const defaultModuleInterfacer = new class Interfacer implements BaseModuleInterfacer {
 
@@ -138,16 +146,23 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 color: '#5000FF',
                 initFile: 'init.js',
                 commandsFolder: 'commands',
-                eventsFolder: 'events'
+                eventsFolder: 'events',
+                data: {
+                    user: new Schema(),
+                    guild: new Schema()
+                },
+                settings: [],
+                settingsFunctions: []
             },
             commands: undefined,
             interfacer: defaultModuleInterfacer,
             initFunc: async () => {
                 return defaultModuleInterfacer
-            }
+            },
+            settings: []
         }
         await eventHandler(client, defaultModule);
-        defaultModule.commands = await commandHandler(client, defaultModule) as CommandsMap
+        defaultModule.commands = await commandHandler(client, defaultModule)
         for (const command of defaultModule.commands.text) {
             commands.text.set(command[1].name, command[1]);
         }
