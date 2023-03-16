@@ -1,4 +1,4 @@
-import {ExtendedClient, Module, Options, PrimitiveWithObject, ReturnOptions} from "../../types";
+import {ExtendedClient} from "../../types";
 import Guild from "../structs/Guild";
 import {Logger} from "winston";
 
@@ -15,7 +15,7 @@ export default class GuildManager {
         }
     }
 
-    setSetting(guild: Guild, settingId: string, newValue: Options[keyof PrimitiveWithObject]) {
+    setSetting(guild: Guild, settingId: string, newValue: string) {
         return new Promise<void>(async (resolve, reject) => {
             this.logger.debug(`Setting ${settingId} to ${newValue} for guild ${guild.guild.id}`)
             const setting = guild.settings.find((setting) => setting.id === settingId)
@@ -23,25 +23,53 @@ export default class GuildManager {
             if (setting.updateFunction) {
                 const updatedSetting = structuredClone(setting)
                 updatedSetting.value = newValue
-                const result = await setting.updateFunction({client: this.client, logger: this.logger, oldConfig: setting, newConfig: updatedSetting})
+                const result = await setting.updateFunction({
+                    client: this.client,
+                    logger: this.logger,
+                    oldConfig: setting,
+                    newConfig: updatedSetting
+                }).catch(() => false)
                 if (result !== true) return reject(result)
             }
-            setting.value = newValue
             const guildSetting = guild.data.settings.find((guildSetting: any) => guildSetting.id === settingId)
             if (guildSetting) {
-                guildSetting.value = JSON.stringify(newValue)
-                await guild.data.save()
-                return resolve()
+                guildSetting.value = newValue
             } else {
                 guild.data.settings.push({
                     id: settingId,
-                    value: JSON.stringify(newValue)
+                    value: newValue
                 })
-                await guild.data.save()
-                return resolve()
             }
+            await guild.data.save()
+            const parsed = JSON.parse(newValue)
+            switch (setting.type) {
+                case 'boolean':
+                case "number":
+                case "text":
+                case "button":
+                case "select":
+                case "object":
+                case "list":
+                    setting.value = parsed
+                    break
+                case "role":
+                    const role = guild.guild.roles.cache.get(parsed) || await guild.guild.roles.fetch(parsed).catch(() => undefined)
+                    if (role === null) return reject('Role not found')
+                    setting.value = role
+                    break
+                case "channel":
+                    const channel = guild.guild.channels.cache.get(parsed) || await guild.guild.channels.fetch(parsed).catch(() => undefined)
+                    if (channel === null) return reject('Channel not found')
+                    setting.value = channel
+                    break
+                case "user":
+                    setting.value = await this.client.profileHandler.fetchOrCreate(parsed)
+                    break
+            }
+            resolve()
         })
     }
+
     unsetSetting(guild: Guild, settingId: string) {
 
     }

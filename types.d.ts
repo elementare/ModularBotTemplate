@@ -232,7 +232,7 @@ type ReturnOptions = {
     button: boolean,
     select: Array<string>,
     list: Array<Options["list"]>,
-    object: Array<GenericPrimitiveOption<keyof Omit<PrimitiveOptions, 'object'>>>
+    object: Array<{ id: string, value: PrimitiveOptions[keyof PrimitiveOptions] }> // GenericPrimitiveOption<keyof Omit<PrimitiveOptions, 'object'>>
 }
 type PrimitiveWithObject = Omit<Options, "list" | "button">
 type PrimitiveOptions = Omit<Options, "select" | "list" | "button" | "object">
