@@ -1,14 +1,20 @@
 import Guild from "../structs/Guild";
-import {ExtendedClient} from "../../types";
+import {ConfigOption, ExtendedClient} from "../../types";
+import {Collection} from "discord.js";
 
 function getAllsettings (client: ExtendedClient, guildData: any) {
     const settings = client.modules.map((module) => module.settings).flat()
-    return settings.map((setting) => {
-        const guildSetting = guildData.settings.find((guildSetting: any) => guildSetting.id === setting.id)
+    const a = settings.map((setting) => {
+        const guildSetting = guildData.settings.find((guildSetting: any) => guildSetting.eventName === setting.eventName)
         if (guildSetting) setting.value = JSON.parse(guildSetting.value)
-        else setting.value = setting.default
+        else setting.value = JSON.parse(setting.default || 'null')
         return setting
     })
+    const b = new Collection<string, ConfigOption>()
+    a.forEach((setting) => {
+        b.set(setting.eventName, setting)
+    })
+    return b
 }
 
 export default class GuildManager {
@@ -19,18 +25,6 @@ export default class GuildManager {
         if (!client) {
             throw new Error('Client is not defined')
         }
-    }
-
-    fetch(id: string): Promise<Guild> {
-        return new Promise(async (resolve, err) => {
-            const guild = await this.client.guilds.fetch(id).catch(() => {
-            })
-            if (!guild) return err('No guild!')
-            const guildData = await this.client.defaultModels.guild.findOne({id: id})
-            if (!guildData) return err('Guild data not present')
-            const settings = getAllsettings(this.client, guildData)
-            return resolve(new Guild(this.client, guild, guildData, settings))
-        })
     }
 
     fetchOrCreate(id: string): Promise<Guild> {

@@ -4,8 +4,8 @@ import * as path from "path";
 import winston, {Logger} from "winston";
 import {
     BaseModuleInterfacer,
-    CommandsMap,
-    ExtendedClient, GenericOption,
+    CommandsMap, ConfigOption,
+    ExtendedClient,
     Manifest,
     Module,
     mongoseSchemaData,
@@ -13,7 +13,6 @@ import {
 } from "../types";
 import eventHandler from "./eventHandler";
 import commandHandler from "./commandHandler";
-import settingsHandler from "./settingsHandler";
 import SlashCommand from "../classes/structs/SlashCommand";
 import Command from "../classes/structs/Command";
 import {Schema} from "mongoose";
@@ -62,6 +61,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 if (!rawManifest.version) throw new Error(`No version found in manifest.json in ${folder}`);
                 if (!rawManifest.color) throw new Error(`No color found in manifest.json in ${folder}`);
                 if (!rawManifest.eventsFolder && !rawManifest.commandsFolder) throw new Error(`No commands or events found in manifest.json in ${folder}`);
+                if (!rawManifest.initFile) throw new Error(`No init file found in manifest.json in ${folder}`);
                 const partialManifest: Partial<Manifest> = rawManifest
                 if (rawManifest.schemaDataFile) {
                     const imports = await import(`../modules/${folder}/${rawManifest.schemaDataFile}`);
@@ -73,10 +73,6 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                     }
                     partialManifest.data = imports;
                 }
-                if (rawManifest.settings) {
-                    partialManifest.settings = await settingsHandler(client, rawManifest.settings, logger.child({ service: `Settings loader`, hexColor: `#ffff00` }), partialManifest, folder);
-
-                }
                 const manifest = partialManifest as Manifest;
                 await logger.notice(`Loaded manifest.json sucessfully in ${folder}`);
                 if (manifest.data?.user) {
@@ -87,9 +83,15 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 }
                 const initFilePath = path.join(folderPath, manifest.initFile);
                 fs.readFileSync(initFilePath, 'utf8')
-                const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer> = require(`../modules/${folder}/${manifest.initFile}`);
+                const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<{
+                    interfacer?: BaseModuleInterfacer,
+                    settings?: ConfigOption[]
+                }> = require(`../modules/${folder}/${manifest.initFile}`);
                 const moduleLogger = logger.child({service: manifest.name, hexColor: manifest.color});
-                await init(client, moduleLogger).then(async (Class) => {
+                await init(client, moduleLogger).then(async ({ interfacer, settings}) => {
+                    if (!interfacer) interfacer = new class Interfacer implements BaseModuleInterfacer {
+                    }()
+                    if (!settings) settings = []
                     const module: Module = {
                         name: manifest.name,
                         folderName: folder,
@@ -100,8 +102,8 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                         initFunc: init,
                         data: manifest,
                         commands: undefined,
-                        interfacer: Class,
-                        settings: manifest.settings as GenericOption[]
+                        interfacer: interfacer,
+                        settings: settings
                     }
                     // Module instanciated, now load commands and events
                     if (manifest.eventsFolder) {
@@ -150,9 +152,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 data: {
                     user: new Schema(),
                     guild: new Schema()
-                },
-                settings: [],
-                settingsFunctions: []
+                }
             },
             commands: undefined,
             interfacer: defaultModuleInterfacer,

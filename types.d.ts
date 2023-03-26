@@ -7,8 +7,8 @@ import {
     Client,
     ClientEvents,
     Collection,
-    GuildMember,
-    Message,
+    GuildMember, JSONEncodable,
+    Message, PermissionResolvable,
     Role,
     SlashCommandBuilder,
     VoiceState
@@ -29,6 +29,21 @@ type configFunc = (args: {
     newConfig: GenericOption
 }) => Promise<true | { err: boolean, reason: string }>;
 
+type ConfigOption = {
+    name: string,
+    description?: string,
+    eventName: string,
+    permission?: PermissionResolvable,
+    value?: string,
+    default?: string,
+} | {
+    name: string,
+    description?: string,
+    eventName: string,
+    permission?: PermissionResolvable,
+    value?: JSONEncodable<any>,
+    default?: string,
+}
 
 class BaseModuleInterfacer {
     [key: string]: any;
@@ -125,8 +140,6 @@ interface Manifest extends RawManifest {
         user?: Schema,
         guild?: Schema
     }
-    settings: Array<GenericOption> | Array<Partial<GenericOption>>,
-    settingsFunctions: Array<configFunc>
 }
 
 interface RawManifest {
@@ -138,7 +151,6 @@ interface RawManifest {
     initFile: string,
     eventsFolder: string,
     commandsFolder: string,
-    settings: Array<Partial<GenericOption>>,
     configUpdateFile?: string
 }
 
@@ -158,7 +170,7 @@ interface Module {
     data: Manifest,
     commands?: CommandsMap,
     interfacer: BaseModuleInterfacer,
-    settings: Array<GenericOption>
+    settings: ConfigOption[]
 }
 
 export interface ExtendedClientEvents extends ClientEvents {
@@ -190,6 +202,11 @@ interface Event<K extends keyof ExtendedClientEvents> {
     readonly event: K,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: ExtendedClientEvents[K]) => void
 }
+interface DynamicEvent {
+    readonly event: string,
+    readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
+}
+
 
 interface CommandArgs {
     client: ExtendedClient,
@@ -200,9 +217,6 @@ interface CommandArgs {
     guild: Guild,
     interfacer: BaseModuleInterfacer
 }
-
-type PrimitiveType = "text" | "number" | "boolean" | "role" | "channel" | "user" | "button"
-type ComplexType = "select" | "list" | "object"
 
 type Options = {
     text: string,
@@ -234,7 +248,6 @@ type ReturnOptions = {
     list: Array<Options["list"]>,
     object: Array<{ id: string, value: PrimitiveOptions[keyof PrimitiveOptions] }> // GenericPrimitiveOption<keyof Omit<PrimitiveOptions, 'object'>>
 }
-type PrimitiveWithObject = Omit<Options, "list" | "button">
 type PrimitiveOptions = Omit<Options, "select" | "list" | "button" | "object">
 type GenericPrimitiveOption<K extends keyof PrimitiveOptions> = {
     name: string,
