@@ -1,11 +1,14 @@
 import mongoose, {Schema} from "mongoose";
 import winston, {Logger} from "winston";
 import {
-    AutocompleteInteraction, ChatInputCommandInteraction,
+    AutocompleteInteraction,
+    Channel,
+    ChatInputCommandInteraction,
     Client,
     ClientEvents,
-    Collection, GuildMember,
-    Message,
+    Collection,
+    GuildMember, JSONEncodable,
+    Message, PermissionResolvable,
     Role,
     SlashCommandBuilder,
     VoiceState
@@ -18,6 +21,29 @@ import Guild from "./classes/structs/Guild";
 import Command from "./classes/structs/Command";
 import SlashCommand from "./classes/structs/SlashCommand";
 import SlashManager from "./classes/managers/SlashManager";
+import SettingsManager from "./classes/managers/SettingsManager";
+type configFunc = (args: {
+    client: ExtendedClient,
+    logger: Logger,
+    oldConfig: GenericOption,
+    newConfig: GenericOption
+}) => Promise<true | { err: boolean, reason: string }>;
+
+type ConfigOption = {
+    name: string,
+    description?: string,
+    eventName: string,
+    permission?: PermissionResolvable,
+    value?: string,
+    default?: string,
+} | {
+    name: string,
+    description?: string,
+    eventName: string,
+    permission?: PermissionResolvable,
+    value?: JSONEncodable<any>,
+    default?: string,
+}
 
 class BaseModuleInterfacer {
     [key: string]: any;
@@ -28,11 +54,12 @@ interface CommandConstructor {
     aliases: Array<string>,
     description: string,
     howToUse: string,
-    func: (args:CommandArgs) => void
+    func: (args: CommandArgs) => void
 }
+
 interface SlashCommandConstructor {
     data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
-    func: (args:SlashCommandArgs) => void,
+    func: (args: SlashCommandArgs) => void,
     global?: boolean,
     autoCompleteFunc?: (args: SlashCommandAutoCompleteArgs) => void
 
@@ -66,34 +93,41 @@ interface ExtendedClient extends Client {
 
     slashHandler: SlashManager;
 
-    modules: Collection<string, Module>,
+    modules: Collection<string, Module>;
     defaultModels: {
         user: mongoose.Model<any>,
         guild: mongoose.Model<any>
-    }
+    };
+    settingsHandler: SettingsManager;
 
     on<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
+
     on<S extends string | symbol>(
         event: Exclude<S, keyof ExtendedClientEvents>,
         listener: (...args: any[]) => Awaitable<void>,
     ): this;
 
     once<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
+
     once<S extends string | symbol>(
         event: Exclude<S, keyof ExtendedClientEvents>,
         listener: (...args: any[]) => Awaitable<void>,
     ): this;
 
-     emit<K extends keyof ExtendedClientEvents>(event: K, ...args: ExtendedClientEvents[K]): boolean;
-     emit<S extends string | symbol>(event: Exclude<S, keyof ExtendedClientEvents>, ...args: unknown[]): boolean;
+    emit<K extends keyof ExtendedClientEvents>(event: K, ...args: ExtendedClientEvents[K]): boolean;
 
-     off<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
-     off<S extends string | symbol>(
+    emit<S extends string | symbol>(event: Exclude<S, keyof ExtendedClientEvents>, ...args: unknown[]): boolean;
+
+    off<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
+
+    off<S extends string | symbol>(
         event: Exclude<S, keyof ExtendedClientEvents>,
         listener: (...args: any[]) => Awaitable<void>,
     ): this;
-     removeAllListeners<K extends keyof ExtendedClientEvents>(event?: K): this;
-     removeAllListeners<S extends string | symbol>(event?: Exclude<S, keyof ExtendedClientEvents>): this;
+
+    removeAllListeners<K extends keyof ExtendedClientEvents>(event?: K): this;
+
+    removeAllListeners<S extends string | symbol>(event?: Exclude<S, keyof ExtendedClientEvents>): this;
 
 }
 
@@ -101,19 +135,11 @@ interface mongoseSchemaData {
     [key: string]: mongoose.SchemaDefinitionProperty
 }
 
-interface Manifest {
-    name: string,
-    description: string,
-    version: string,
-    color: string,
-    schemaDataFile?: string,
-    data?: {
+interface Manifest extends RawManifest {
+    data: {
         user?: Schema,
         guild?: Schema
-    },
-    initFile: string,
-    eventsFolder: string,
-    commandsFolder: string
+    }
 }
 
 interface RawManifest {
@@ -124,14 +150,15 @@ interface RawManifest {
     schemaDataFile?: string,
     initFile: string,
     eventsFolder: string,
-    commandsFolder: string
+    commandsFolder: string,
+    configUpdateFile?: string
 }
-
 
 type CommandsMap = {
     slash: Collection<string, SlashCommand>,
     text: Collection<string, Command>
 }
+
 interface Module {
     name: string,
     folderName: string,
@@ -142,7 +169,8 @@ interface Module {
     initFunc: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer>,
     data: Manifest,
     commands?: CommandsMap,
-    interfacer: BaseModuleInterfacer
+    interfacer: BaseModuleInterfacer,
+    settings: ConfigOption[]
 }
 
 export interface ExtendedClientEvents extends ClientEvents {
@@ -174,6 +202,11 @@ interface Event<K extends keyof ExtendedClientEvents> {
     readonly event: K,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: ExtendedClientEvents[K]) => void
 }
+interface DynamicEvent {
+    readonly event: string,
+    readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
+}
+
 
 interface CommandArgs {
     client: ExtendedClient,
@@ -183,4 +216,95 @@ interface CommandArgs {
     args: Array,
     guild: Guild,
     interfacer: BaseModuleInterfacer
+}
+
+type Options = {
+    text: string,
+    number: number,
+    boolean: boolean,
+    role: string,
+    channel: string,
+    user: string,
+    button: boolean,
+    select: Array<string>,
+    list: Array<{
+        id: string,
+        value: PrimitiveOptions[keyof PrimitiveOptions]
+    }>,
+    object: Array<{
+        id: string,
+        value: PrimitiveOptions[keyof PrimitiveOptions]
+    }>
+}
+type ReturnOptions = {
+    text: string,
+    number: number,
+    boolean: boolean,
+    role: Role,
+    channel: Channel,
+    user: User,
+    button: boolean,
+    select: Array<string>,
+    list: Array<Options["list"]>,
+    object: Array<{ id: string, value: PrimitiveOptions[keyof PrimitiveOptions] }> // GenericPrimitiveOption<keyof Omit<PrimitiveOptions, 'object'>>
+}
+type PrimitiveOptions = Omit<Options, "select" | "list" | "button" | "object">
+type GenericPrimitiveOption<K extends keyof PrimitiveOptions> = {
+    name: string,
+    id: string,
+    description: string,
+    default?: Options[K],
+    type: K,
+    value?: ReturnOptions[K],
+    updateFunction?: configFunc
+}
+type GenericOption = GenericPrimitiveOption<keyof PrimitiveOptions> | SelectOption | ListOption | ObjectOption | ButtonOption
+
+type ObjectOption = {
+    name: string,
+    id: string,
+    description: string,
+    type: "object",
+    structure: Array<Omit<GenericPrimitiveOption<keyof PrimitiveOptions>, "default">>,
+    default?: Options["object"],
+    value?: Options["object"],
+    updateFunction?: configFunc
+}
+type ButtonOption = {
+    name: string,
+    id: string,
+    description: string,
+    type: "button",
+    default?: Options["button"],
+    value?: ReturnOptions["button"],
+    updateFunction?: configFunc
+}
+
+
+type SelectOption = {
+    name: string,
+    id: string,
+    description: string,
+    max: number, // 0 = all
+    min: number, // cant be 0 or below
+    type: "select",
+    default?: Options["select"],
+    value?: ReturnOptions["select"],
+    options: Array<{
+        id: string,
+        value: string,
+        name: string,
+    }>,
+    updateFunction?: configFunc
+}
+
+type ListOption = {
+    name: string,
+    id: string,
+    description: string,
+    type: "list",
+    value?: Array<Options["list"]>,
+    structure: Array<Omit<GenericPrimitiveOption<keyof PrimitiveOptions>, "default">>,
+    default?: Array<Options["list"]>,
+    updateFunction?: configFunc
 }

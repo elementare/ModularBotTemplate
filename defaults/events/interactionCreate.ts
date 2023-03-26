@@ -33,7 +33,6 @@ export const event: Event<"interactionCreate"> = {
             if (!command.module) return;
             const module = client.modules.get(command.module)
             if (!module) return;
-
             if (!command.autoCompleteFunc) return interaction.respond([{
                 name: "This command doest not have auto complete set up",
                 value: "null"
@@ -45,7 +44,7 @@ export const event: Event<"interactionCreate"> = {
                 profile: await client.profileHandler.fetchOrCreate(interaction.user.id, interaction.guildId),
                 guild: await client.guildHandler.fetchOrCreate(interaction.guildId),
                 interfacer: module.interfacer
-            });
+            })
 
         }
     }
