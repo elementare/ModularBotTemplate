@@ -10,6 +10,7 @@ function getAllsettings (client: ExtendedClient, guildData: any) {
         else setting.value = JSON.parse(setting.default || 'null')
         return setting
     })
+
     const b = new Collection<string, ConfigOption>()
     a.forEach((setting) => {
         b.set(setting.eventName, setting)

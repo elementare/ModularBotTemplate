@@ -119,7 +119,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
         logger.crit(err);
         throw new Error(err);
     });
-    client.profileHandler = new UserHandler(client);
+    client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
     client.guildHandler = new GuildHandler(client);
     client.slashHandler = new SlashManager(client);
     client.settingsHandler = new SettingsManager(client, logger.child({service: 'Settings Manager', hexColor: '#bbaaff'}));
@@ -127,8 +127,14 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     logger.info('Profile handler and Guild Handler loaded');
     const {userData, guildData} = await loadModules(logger, client);
     logger.notice('All modules loaded!');
+    const keys = Object.keys(userData);
+    logger.notice(`User schema has the keys: ${chalk.green(keys.join(', '))}`);
+    const guildKeys = Object.keys(guildData);
+    logger.notice(`Guild schema has the keys: ${chalk.green(guildKeys.join(', '))}`);
     const userSchema = new mongoose.Schema(userData)
     const guildSchema = new mongoose.Schema(guildData)
+    userSchema.plugin(require('mongoose-autopopulate'))
+    guildSchema.plugin(require('mongoose-autopopulate'))
     const user = mongoose.model('user', userSchema)
     const guild = mongoose.model('guild', guildSchema)
     logger.notice('MongoDB models updated successfully!')
@@ -136,4 +142,5 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
         user,
         guild
     }
+
 })

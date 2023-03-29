@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {Logger} from "winston";
+import {Logger, loggers} from "winston";
 import {Module, Event, ExtendedClient} from "../types";
 
 async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any>>> {
