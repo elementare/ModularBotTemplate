@@ -24,7 +24,7 @@ export default new SlashCommand({
         });
         const setting = guild.settings.find(setting => setting.eventName === interaction.options.getString('configuração'));
         if (!setting) return interaction.reply({content: 'Configuração não encontrada.. :(', ephemeral: true});
-        client.emit(setting.eventName, interaction, guild, setting);
+        client.emit(setting.eventName, interaction, guild);
     },
     global: true,
     autoCompleteFunc: async ({interaction, client}) => {
@@ -34,9 +34,9 @@ export default new SlashCommand({
         }]);
         const guildData = await client.guildHandler.fetchOrCreate(interaction.guildId);
         const result = new fuse([...guildData.settings.values()], {
-            keys: ['name', 'id'],
+            keys: ['name', 'eventName'],
             includeScore: true,
-            threshold: 0.3
+            threshold: 0.25
         })
         const settings = (result.search(interaction.options.getString('configuração') || 'a').map(result => result.item)).filter(setting => {
             if (typeof interaction.member.permissions === 'string') return false

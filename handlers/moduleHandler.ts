@@ -21,6 +21,15 @@ function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function startTicks(client: ExtendedClient, logger: Logger) {
+    await sleep(5000)
+    await logger.notice('Starting ticks...');
+    while (true) {
+        client.emit('tick');
+        await sleep(90000);
+    }
+}
+
 export async function loadModules(logger: winston.Logger, client: ExtendedClient): Promise<{
     userData: mongoseSchemaData,
     guildData: mongoseSchemaData,
@@ -123,59 +132,60 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 })
             }
         }
-        await logger.notice('Modules loaded');
-        await logger.notice('Setting up commands...');
-        await logger.notice(`Text commands List: ${commands.text.map((command) => `${command.name}`).join(', ')}`)
-        await logger.notice(`Slash commands List: ${commands.slash.map((command) => `${command.data.name}`).join(', ')}`)
-        client.commands = commands;
-        client.modules = modules;
-        await logger.notice('Commands and modules setup, loading defaults...');
-        const defaultModuleInterfacer = new class Interfacer implements BaseModuleInterfacer {
+    }
+    await logger.notice('Modules loaded');
+    await logger.notice('Setting up commands...');
+    await logger.notice(`Text commands List: ${commands.text.map((command) => `${command.name}`).join(', ')}`)
+    await logger.notice(`Slash commands List: ${commands.slash.map((command) => `${command.data.name}`).join(', ')}`)
+    client.commands = commands;
+    client.modules = modules;
+    await logger.notice('Commands and modules setup, loading defaults...');
+    const defaultModuleInterfacer = new class Interfacer implements BaseModuleInterfacer {
 
-        }()
+    }()
 
-        const defaultModule: Module = {
+    const defaultModule: Module = {
+        name: 'Default',
+        folderName: 'default',
+        description: 'Default module',
+        version: '1.0.0',
+        color: '#5000FF',
+        logger: logger.child({service: 'Default', hexColor: '#5000FF'}), // To change Module "Default" color, just change the logger directly and don't be dumb like me
+        data: {
             name: 'Default',
-            folderName: 'default',
             description: 'Default module',
             version: '1.0.0',
             color: '#5000FF',
-            logger: logger.child({service: 'Default', hexColor: '#5000FF'}), // To change Module "Default" color, just change the logger directly and don't be dumb like me
+            initFile: 'init.js',
+            commandsFolder: 'commands',
+            eventsFolder: 'events',
             data: {
-                name: 'Default',
-                description: 'Default module',
-                version: '1.0.0',
-                color: '#5000FF',
-                initFile: 'init.js',
-                commandsFolder: 'commands',
-                eventsFolder: 'events',
-                data: {
-                    user: new Schema(),
-                    guild: new Schema()
-                }
-            },
-            commands: undefined,
-            interfacer: defaultModuleInterfacer,
-            initFunc: async () => {
-                return defaultModuleInterfacer
-            },
-            settings: []
-        }
-        await eventHandler(client, defaultModule);
-        defaultModule.commands = await commandHandler(client, defaultModule)
-        for (const command of defaultModule.commands.text) {
-            commands.text.set(command[1].name, command[1]);
-        }
-        for (const command of defaultModule.commands.slash) {
-            commands.slash.set(command[1].data.name, command[1]);
-        }
-        client.modules.set('Default', defaultModule);
-        await logger.notice('Defaults loaded');
-        await logger.notice('Registering global commands...');
-        await client.slashHandler.registerGlobalCommands();
-        await logger.notice('Global commands registered');
+                user: new Schema(),
+                guild: new Schema()
+            }
+        },
+        commands: undefined,
+        interfacer: defaultModuleInterfacer,
+        initFunc: async () => {
+            return defaultModuleInterfacer
+        },
+        settings: []
     }
-    await sleep(500)
+    await eventHandler(client, defaultModule);
+    defaultModule.commands = await commandHandler(client, defaultModule)
+    for (const command of defaultModule.commands.text) {
+        commands.text.set(command[1].name, command[1]);
+    }
+    for (const command of defaultModule.commands.slash) {
+        commands.slash.set(command[1].data.name, command[1]);
+    }
+    client.modules.set('Default', defaultModule);
+    await logger.notice('Defaults loaded');
+    await logger.notice('Registering global commands...');
+    await client.slashHandler.registerGlobalCommands();
+    await logger.notice('Global commands registered');
+    startTicks(client, logger);
+    await sleep(100)
     return {
         userData: userObj,
         guildData: guildObj,
