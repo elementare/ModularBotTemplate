@@ -13,7 +13,7 @@ async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any
         if (stat.isDirectory()) {
             logger.info(`Found directory ${file} in ${dir}`);
             results = results.concat(await findJsFiles(filePath, logger));
-        } else if (path.extname(filePath) === '.ts') {
+        } else if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.js') {
             logger.info(`Found event file ${filePath}`);
             const event = require(filePath)
             results.push(event.event);

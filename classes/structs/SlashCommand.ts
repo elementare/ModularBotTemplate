@@ -3,7 +3,7 @@ import {SlashCommandArgs, SlashCommandAutoCompleteArgs, SlashCommandConstructor}
 import {Logger} from "winston";
 
 export default class SlashCommand {
-    public readonly data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
+    public readonly data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">;
     public readonly func: (args: SlashCommandArgs) => void;
     public logger?: Logger;
 

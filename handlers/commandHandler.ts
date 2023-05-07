@@ -20,7 +20,7 @@ async function findJsFiles(dir: string, logger: Logger, commandLogger: Logger, m
             const { text, slash } = await findJsFiles(filePath, logger, commandLogger, moduleName)
             textCommands = textCommands.concat(text);
             slashCommands = slashCommands.concat(slash);
-        } else if (path.extname(filePath) === '.ts') {
+        } else if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.js') {
             logger.info(`Found command file ${filePath}`);
             const file: Command | SlashCommand = await import(filePath).then(file => file.default);
             if (file instanceof Command) {
@@ -49,6 +49,7 @@ export default async (client: Client, module: Module):Promise<CommandsMap> => {
             commandLogger.info(`Loading command ${file.name} from Defaults`);
             commands.text.set(file.name, file);
             for (const alias of file.aliases) {
+                commandLogger.info(`Loading alias ${alias} for command ${file.name} from Defaults`);
                 commands.text.set(alias, file);
             }
         }
@@ -67,6 +68,7 @@ export default async (client: Client, module: Module):Promise<CommandsMap> => {
             commandLogger.info(`Loading command ${file.name} from module ${module.name}`);
             commands.text.set(file.name, file);
             for (const alias of file.aliases) {
+                commandLogger.info(`Loading alias ${alias} for command ${file.name} from module ${module.name}`);
                 commands.text.set(alias, file);
             }
         }

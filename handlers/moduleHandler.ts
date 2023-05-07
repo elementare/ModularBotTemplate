@@ -37,7 +37,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
 }> {
     const guildObj: mongoseSchemaData = {
         id: {type: String, required: true},
-        settings: [{ id: {type: String, required: true}, value: {type: String, required: true} }]
+        settings: { type: Map, default: new Map() }
     }
     const userObj: mongoseSchemaData = {
         id: {type: String, required: true},
@@ -60,6 +60,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         await logger.notice(`Loading module folder ${folder}`);
         const folderPath = path.join(modulesPath, folder);
         const files = fs.readdirSync(folderPath);
+        logger.info(`Found ${files.length} files in ${folderPath}`);
         for (const file of files) {
             if (file === 'manifest.json') {
                 const manifestPath = path.join(folderPath, file);
@@ -73,6 +74,11 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 if (!rawManifest.initFile) throw new Error(`No init file found in manifest.json in ${folder}`);
                 const partialManifest: Partial<Manifest> = rawManifest
                 if (rawManifest.schemaDataFile) {
+                    const fileName = rawManifest.schemaDataFile.split('.')[0];
+                    const files = fs.readdirSync(`./modules/${folder}/`)
+                    if (!files.includes(`${fileName}.js`) && !files.includes(`${fileName}.ts`)) throw new Error(`Init file ${fileName} does not exist in ${folder}`);
+                    if (files.includes(`${fileName}.js`)) rawManifest.schemaDataFile = `${fileName}.js`;
+                    if (files.includes(`${fileName}.ts`)) rawManifest.schemaDataFile = `${fileName}.ts`;
                     const imports = await import(`../modules/${folder}/${rawManifest.schemaDataFile}`);
                     if (imports.user) {
                         userObj[rawManifest.name] = imports.user;
@@ -90,8 +96,13 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 if (manifest.data?.guild) {
                     guildObj[manifest.name] = manifest.data.guild;
                 }
-                const initFilePath = path.join(folderPath, manifest.initFile);
-                fs.readFileSync(initFilePath, 'utf8')
+                // const initFilePath = path.join(folderPath, manifest.initFile);
+                // fs.readFileSync(initFilePath, 'utf8')
+                const fileName = manifest.initFile.split('.')[0];
+                const files = fs.readdirSync(`./modules/${folder}/`)
+                if (!files.includes(`${fileName}.js`) && !files.includes(`${fileName}.ts`)) throw new Error(`Init file ${fileName} does not exist in ${folder}`);
+                if (files.includes(`${fileName}.js`)) manifest.initFile = `${fileName}.js`;
+                if (files.includes(`${fileName}.ts`)) manifest.initFile = `${fileName}.ts`;
                 const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<{
                     interfacer?: BaseModuleInterfacer,
                     settings?: ConfigOption[]
@@ -121,7 +132,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                     if (manifest.commandsFolder) {
                         module.commands = await commandHandler(client, module) as CommandsMap
                         for (const command of module.commands.text) {
-                            commands.text.set(command[1].name, command[1]);
+                            commands.text.set(command[0], command[1]);
                         }
                         for (const command of module.commands.slash) {
                             commands.slash.set(command[1].data.name, command[1]);

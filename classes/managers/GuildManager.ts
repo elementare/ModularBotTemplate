@@ -1,21 +1,22 @@
 import Guild from "../structs/Guild";
 import {ConfigOption, ExtendedClient} from "../../types";
-import {Collection} from "discord.js";
+import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
+import User from "../structs/User";
 
-function getAllsettings (client: ExtendedClient, guildData: any) {
+function getAllSettings (client: ExtendedClient, guildData: any) {
     const settings = client.modules.map((module) => module.settings).flat()
-    const a = settings.map((setting) => {
-        const guildSetting = guildData.settings.find((guildSetting: any) => guildSetting.eventName === setting.eventName)
-        if (guildSetting) setting.value = JSON.parse(guildSetting.value)
-        else setting.value = JSON.parse(setting.default || 'null')
-        return setting
-    })
-
-    const b = new Collection<string, ConfigOption>()
-    a.forEach((setting) => {
-        b.set(setting.eventName, setting)
-    })
-    return b
+    const settingsMap = new Collection<string, ConfigOption>()
+    for (const setting of settings) {
+        const settingData = guildData.settings.get(setting.eventName)
+        if (!settingData) {
+            setting.value = JSON.parse(setting.default || 'null')
+            settingsMap.set(setting.eventName, setting)
+        } else {
+            settingData.value = JSON.parse(settingData.value)
+            settingsMap.set(setting.eventName, settingData)
+        }
+    }
+    return settingsMap
 }
 
 export default class GuildManager {
@@ -40,8 +41,21 @@ export default class GuildManager {
                 await profile.save()
                 guildData = profile
             }
-            const settings = getAllsettings(this.client, guildData)
-            return resolve(new Guild(this.client, guild, guildData, settings))
+            return resolve(new Guild(this.client, guild, guildData, getAllSettings(this.client, guildData)))
+        })
+    }
+
+    findByKV(filter: any): Promise<Array<Guild>> {
+        return new Promise(async (resolve, err) => {
+            const guildProfiles = await this.client.defaultModels.guild.find(filter)
+            if (!guildProfiles || guildProfiles.length === 0) return err('No guild profiles!')
+            const guilds: Guild[] = []
+            for (const guildProfile of guildProfiles) {
+                const guild = await this.client.guilds.fetch(guildProfile.id)
+                if (!guild) continue
+                guilds.push(new Guild(this.client, guild, guildProfile, getAllSettings(this.client, guildProfile)))
+            }
+            resolve( guilds )
         })
     }
 }

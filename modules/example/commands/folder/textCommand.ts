@@ -11,7 +11,7 @@ export default new Command({
         logger.notice(`Comer command executed`);
         let code = args.join(" ").replace(/```(js)?/g, '')
         if (!code) return message.reply('Please Provide Some Code to Evaluate!');
-        const user = await client.profileHandler.fetch(message.member.id)
+        const user = await client.profileHandler.fetch(message.member.id, message.guild!.id)
         code = "(async () => {" + code + "})()"
         try {
             const waitFn = (ev: string) => {

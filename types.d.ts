@@ -13,7 +13,7 @@ import {
     SlashCommandBuilder,
     VoiceState
 } from "discord.js";
-import ProfileManager from "./classes/managers/ProfileManager";
+import ProfileManager from "./classes/managers/UserManager";
 import GuildManager from "./classes/managers/GuildManager"
 import User from "./classes/structs/User";
 import {Awaitable} from "@discordjs/util";
@@ -29,6 +29,10 @@ type configFunc = (args: {
     newConfig: GenericOption
 }) => Promise<true | { err: boolean, reason: string }>;
 
+type EncodableJSON = string | {
+    toString(): string;
+}
+
 type ConfigOption = {
     name: string,
     description?: string,
@@ -41,7 +45,7 @@ type ConfigOption = {
     description?: string,
     eventName: string,
     permission?: PermissionResolvable,
-    value?: JSONEncodable<any>,
+    value: EncodableJSON<any>,
     default?: string,
 }
 
@@ -58,11 +62,10 @@ interface CommandConstructor {
 }
 
 interface SlashCommandConstructor {
-    data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
+    data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption"> | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
     func: (args: SlashCommandArgs) => void,
     global?: boolean,
     autoCompleteFunc?: (args: SlashCommandAutoCompleteArgs) => void
-
 }
 
 interface SlashCommandArgs {
@@ -195,6 +198,7 @@ export interface ExtendedClientEvents extends ClientEvents {
     newBoosterMember: [
         member: GuildMember
     ];
+    tick: []
 }
 
 

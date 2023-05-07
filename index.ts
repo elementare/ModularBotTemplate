@@ -24,7 +24,8 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.json(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.timestamp()
+                    winston.format.timestamp(),
+                    winston.format.splat()
                 )
             }),
             new winston.transports.File({
@@ -32,7 +33,8 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.json(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.timestamp()
+                    winston.format.timestamp(),
+                    winston.format.splat()
                 )
             }),
             new winston.transports.File({
@@ -41,7 +43,8 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.json(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.timestamp()
+                    winston.format.timestamp(),
+                    winston.format.splat()
                 )
             }),
             new winston.transports.File({
@@ -49,14 +52,16 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.json(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.timestamp()
+                    winston.format.timestamp(),
+                    winston.format.splat()
                 )
             }),
             new winston.transports.Console({
                 format: winston.format.combine(
                     winston.format.colorize(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(info.hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`)
+                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(info.hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`),
+                    winston.format.splat()
                 )
             })
         ]
@@ -70,14 +75,16 @@ logger.rejections.handle(
         format: winston.format.combine(
             winston.format.json(),
             winston.format.label({label: path.basename(module.filename)}),
-            winston.format.timestamp()
+            winston.format.timestamp(),
+            winston.format.splat()
         )
     }),
     new winston.transports.Console({
         format: winston.format.combine(
             winston.format.colorize(),
             winston.format.label({label: path.basename(module.filename)}),
-            winston.format.printf(info => `[${info.label} - ${info.level}] ${info.message}`)
+            winston.format.printf(info => `[${info.label} - ${info.level}] ${info.message}`),
+            winston.format.splat()
         )
     })
 );
@@ -142,5 +149,4 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
         user,
         guild
     }
-
 })
