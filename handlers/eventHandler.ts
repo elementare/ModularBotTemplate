@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {Logger, loggers} from "winston";
-import {Module, Event, ExtendedClient} from "../types";
+import {Logger} from "winston";
+import {Event, ExtendedClient, Module} from "../types";
 
 async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any>>> {
     let results: Array<Event<any>> = [];
@@ -24,21 +24,29 @@ async function findJsFiles(dir: string, logger: Logger): Promise<Array<Event<any
 
 
 export default async (client: ExtendedClient, module: Module) => {
-    const eventLogger = module.logger.child({ service: 'Event Loader', hexColor: '#CCAAFF' });
+    const eventLogger = module.logger.child({service: 'Event Loader', hexColor: '#CCAAFF'});
+    const eventsByModule: Event<any>[] = []
     if (module.name === 'Default') {
         const files = await findJsFiles(`./defaults/events`, eventLogger);
+        /*
         for (const file of files) {
             eventLogger.info(`Loading event ${file.event} from Defaults`);
             client.on(file.event, file.func.bind(null, client, module.logger));
         }
-        eventLogger.notice(`Loaded ${files.length} default events`);
+         */
+        eventsByModule.push(...files)
+        eventLogger.notice(`Loaded ${files.length} default events to the cache, and waiting for the client to be ready`);
     } else {
         const files = await findJsFiles(`./modules/${module.folderName}/${module.data.eventsFolder}`, eventLogger);
+
+        /*
         for (const file of files) {
             eventLogger.info(`Loading event ${file.event} from module ${module.name}`);
             client.on(file.event, file.func.bind(null, client, module.logger));
         }
-        eventLogger.info(`Loaded ${files.length} events for module ${module.data.name}`);
+         */
+        eventsByModule.push(...files)
+        eventLogger.info(`Loaded ${files.length} events for module ${module.data.name} to the cache, and waiting for the client to be ready`);
     }
-
+    return eventsByModule
 }

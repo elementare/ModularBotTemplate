@@ -2,7 +2,7 @@ import User from '../structs/User'
 import {ExtendedClient} from "../../types";
 import Guild from "../structs/Guild";
 import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
-import {Logger, loggers} from "winston";
+import {Logger } from "winston";
 
 async function getGuilds(client: ExtendedClient, guilds: Array<string>): Promise<Array<Guild>> {
     const guildArray = []
@@ -21,7 +21,7 @@ export default class userHandler {
     }
     fetch(id: string, guild: string): Promise<User> {
         return new Promise(async (resolve, err) => {
-            const userProfile = await this.client.defaultModels.user.findOne({id: id})
+            const userProfile = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             if (!userProfile) return err('No user profile!')
             const guildObj = await this.client.guildHandler.fetchOrCreate(guild).catch(() => {})
             if (!guildObj) return err('No guild found with the id!')
@@ -35,7 +35,7 @@ export default class userHandler {
     fetchOrCreate(id: string, guild: string): Promise<User> {
         return new Promise(async (resolve, err) => {
             this.logger.debug(`Fetching user ${id} from guild ${guild}`)
-            let userProfile = await this.client.defaultModels.user.findOne({id: id})
+            let userProfile = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             const guildObj = await this.client.guildHandler.fetchOrCreate(guild).catch(() => {})
             if (!guildObj) return err('No guild!')
             if (!userProfile) {
@@ -44,7 +44,7 @@ export default class userHandler {
                     guildId: guild
                 })
                 await profile.save()
-                userProfile = await this.client.defaultModels.user.findOne({id: id})
+                userProfile = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             }
             // this.logger.debug(`Created user profile if it didn't exist` )
             const member = await guildObj.guild.members.fetch(id).catch(() => {
@@ -68,7 +68,7 @@ export default class userHandler {
 
     create(id: string, guild: string): Promise<User> {
         return new Promise(async (resolve, err) => {
-            const userTest = await this.client.defaultModels.user.findOne({id: id})
+            const userTest = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             if (userTest) return err('User already exists!')
             const userProfile = await this.client.defaultModels.user.create({
                 id: id,
@@ -86,14 +86,14 @@ export default class userHandler {
 
     findOrCreateProfile(id: string, guild: string): Promise<User> {
         return new Promise(async (resolve) => {
-            let userProfile = await this.client.defaultModels.user.findOne({id: id})
+            let userProfile = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             if (!userProfile) {
                 const profile = await this.client.defaultModels.user.create({
                     id: id,
                     guildId: guild
                 })
                 await profile.save()
-                userProfile = await this.client.defaultModels.user.findOne({id: id})
+                userProfile = await this.client.defaultModels.user.findOne({id: id, guildId: guild})
             }
             resolve(userProfile)
         })
@@ -103,11 +103,11 @@ export default class userHandler {
         return new Promise(async (resolve, err) => {
             const userProfiles = await this.client.defaultModels.user.find(filter)
             if (!userProfiles || userProfiles.length === 0) return err('No user profiles!')
-            const guilds = await userProfiles.map((profile: User) => profile.guild.guild.id)
+            const guilds = userProfiles.map((profile: any) => profile.guildId)
             const guildArray = await getGuilds(this.client, guilds)
             const userIdsByGuild = new Map<string, string>()
-            userProfiles.forEach((profile: User) => {
-                userIdsByGuild.set(profile.guild.guild.id, profile.id)
+            userProfiles.forEach((profile: any) => {
+                userIdsByGuild.set(profile.guildId, profile.id)
             })
             const usersByGuild = new Map<string, Collection<string, GuildMember> | GuildMember>()
             for (const guild of guildArray) {
@@ -117,11 +117,13 @@ export default class userHandler {
                 usersByGuild.set(guild.guild.id, members)
             }
             resolve(guildArray.map((guild: Guild) => {
-                const members = usersByGuild.get(guild.guild.id) as Collection<string, GuildMember> | GuildMember
+                const members = usersByGuild.get(guild.guild.id) as Collection<string, GuildMember> | GuildMember | undefined
                 if (members instanceof Collection) {
                     return members.map((member: GuildMember) => new User(this.client, member, guild, userProfiles.find((profile: User) => profile.id === member.id)))
-                } else {
+                } else if (members instanceof GuildMember) {
                     return [new User(this.client, members, guild, userProfiles.find((profile: User) => profile.id === members.id))]
+                } else {
+                    return []
                 }
             }).flat())
         })

@@ -114,6 +114,7 @@ import UserHandler from "./classes/managers/UserManager";
 import GuildHandler from "./classes/managers/GuildManager";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
+import {Collection} from "discord.js";
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     logger.notice('Connecting to MongoDB...');
@@ -129,6 +130,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
     client.guildHandler = new GuildHandler(client);
     client.slashHandler = new SlashManager(client);
+    client.cachedEvents = new Collection();
     client.settingsHandler = new SettingsManager(client, logger.child({service: 'Settings Manager', hexColor: '#bbaaff'}));
     client.logger = logger;
     logger.info('Profile handler and Guild Handler loaded');

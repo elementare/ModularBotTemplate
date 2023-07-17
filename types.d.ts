@@ -7,7 +7,7 @@ import {
     Client,
     ClientEvents,
     Collection,
-    GuildMember, JSONEncodable,
+    GuildMember,
     Message, PermissionResolvable,
     Role,
     SlashCommandBuilder,
@@ -102,6 +102,7 @@ interface ExtendedClient extends Client {
         guild: mongoose.Model<any>
     };
     settingsHandler: SettingsManager;
+    cachedEvents: Collection<string, Event<any>[]>;
 
     on<K extends keyof ExtendedClientEvents>(event: K, listener: (...args: ExtendedClientEvents[K]) => Awaitable<void>): this;
 
@@ -198,7 +199,9 @@ export interface ExtendedClientEvents extends ClientEvents {
     newBoosterMember: [
         member: GuildMember
     ];
-    tick: []
+    tick: [],
+    fullyReady: [],
+    dbReady: []
 }
 
 

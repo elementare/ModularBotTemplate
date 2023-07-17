@@ -29,12 +29,15 @@ async function startTicks(client: ExtendedClient, logger: Logger) {
         await sleep(90000);
     }
 }
-
+let dbReady = false;
 export async function loadModules(logger: winston.Logger, client: ExtendedClient): Promise<{
     userData: mongoseSchemaData,
     guildData: mongoseSchemaData,
     modules: discord.Collection<string, Module>
 }> {
+    client.once('dbReady', async () => {
+        dbReady = true;
+    })
     const guildObj: mongoseSchemaData = {
         id: {type: String, required: true},
         settings: { type: Map, default: new Map() }
@@ -127,7 +130,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                     }
                     // Module instanciated, now load commands and events
                     if (manifest.eventsFolder) {
-                        await eventHandler(client, module);
+                        client.cachedEvents.set(module.name, await eventHandler(client, module))
                     }
                     if (manifest.commandsFolder) {
                         module.commands = await commandHandler(client, module) as CommandsMap
@@ -182,7 +185,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
         },
         settings: []
     }
-    await eventHandler(client, defaultModule);
+    client.cachedEvents.set(defaultModule.name, await eventHandler(client, defaultModule))
     defaultModule.commands = await commandHandler(client, defaultModule)
     for (const command of defaultModule.commands.text) {
         commands.text.set(command[1].name, command[1]);
@@ -196,6 +199,15 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
     await client.slashHandler.registerGlobalCommands();
     await logger.notice('Global commands registered');
     startTicks(client, logger);
+
+    if (dbReady) {
+        client.emit('fullyReady')
+    } else {
+        client.once('dbReady', () => {
+            client.emit('fullyReady')
+        })
+    }
+
     await sleep(100)
     return {
         userData: userObj,
