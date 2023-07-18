@@ -1,6 +1,6 @@
-import {Client} from "discord.js";
+import {Client, PermissionsBitField} from "discord.js";
 import {Logger} from "winston";
-import {BaseModuleInterfacer, ConfigOption} from "../../types";
+import {BaseModuleInterfacer, ConfigOption, SettingStructure} from "../../types";
 
 
 module.exports = async (client: Client, logger: Logger): Promise<{
@@ -14,13 +14,56 @@ module.exports = async (client: Client, logger: Logger): Promise<{
         }
 
     }(logger);
-    const settings: Array<ConfigOption> = [
+    const settings: Array<SettingStructure> = [
         {
-            name: 'example',
+            name: 'cu',
             description: 'Example setting',
-            eventName: 'example'
+            type: 'string',
+            permission: PermissionsBitField.Flags.Administrator
+        },
+        {
+            name: 'cu2',
+            description: 'Example setting 2',
+            type: 'number',
+            permission: PermissionsBitField.Flags.Administrator
+        },
+        {
+            name: 'cu3',
+            description: 'Example setting 3',
+            type: "complex",
+            embed: {
+                title: 'Example embed',
+                description: 'Example embed description',
+                color: '#ff0000',
+            },
+            permission: PermissionsBitField.Flags.Administrator,
+            schema: {
+                cu: {
+                    name: 'cu',
+                    type: 'string'
+                },
+                cu2: {
+                    name: 'cu2',
+                    type: 'number'
+                },
+                cu3: {
+                    name: 'cu3',
+                    type: 'complex',
+                    embed: {
+                        title: 'Example embed',
+                        description: 'Example embed description',
+                        color: '#ff0000',
+                    },
+                    schema: {
+                        cu: {
+                            name: 'cu',
+                            type: 'string'
+                        }
+                    }
+                }
+            }
         }
-        ]
+    ]
     return {
         interfacer: interfacer,
         settings: settings

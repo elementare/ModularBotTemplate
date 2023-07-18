@@ -33,7 +33,9 @@ type EncodableJSON = string | {
     toString(): string;
 }
 
-type ConfigOption = {
+type ConfigOption = SettingStructure
+/*
+{
     name: string,
     description?: string,
     eventName: string,
@@ -48,7 +50,7 @@ type ConfigOption = {
     value: EncodableJSON<any>,
     default?: string,
 }
-
+ */
 class BaseModuleInterfacer {
     [key: string]: any;
 }
@@ -314,4 +316,48 @@ type ListOption = {
     structure: Array<Omit<GenericPrimitiveOption<keyof PrimitiveOptions>, "default">>,
     default?: Array<Options["list"]>,
     updateFunction?: configFunc
+}
+
+type SettingStructureBaseTypes = "string" | "number" | "boolean"
+type SettingStructureTypesAdditions = "arr"
+type SettingStructureTypesFullNonComplex = `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}` | SettingStructureBaseTypes
+
+type SchemaSetting = {
+        name: string,
+        type: SettingStructureTypesFullNonComplex
+    } | {
+        name: string,
+        type: "complex" | "complex-arr",
+        embed: any
+        schema: {
+            [key: string]: SchemaSetting
+        }
+    }
+type SettingStructure = {
+    name: string
+    description: string
+    type: SettingStructureTypesFullNonComplex
+    default?: any,
+    permission: any
+} | {
+    name: string,
+    description: string,
+    type: "complex" | "complex-arr"
+    embed: any
+    schema: {
+        [key: string]: SchemaSetting
+    }
+    default?: any,
+    permission: bigint
+}
+type SavedSetting = {
+    name: string,
+    value: any,
+    permission: bigint,
+    type: SettingStructureTypesFullNonComplex | "complex" | "complex-arr",
+    struc: SettingStructure
+}
+type DbSetting = {
+    name: string,
+    value: any
 }

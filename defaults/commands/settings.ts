@@ -2,9 +2,29 @@ import SlashCommand from "../../classes/structs/SlashCommand";
 import {
     SlashCommandBuilder,
     ComponentType,
-    PermissionsBitField
+    PermissionsBitField, ChatInputCommandInteraction
 } from "discord.js";
 import fuse from "fuse.js";
+import {Logger} from "winston";
+import fs from "fs";
+import path from "path";
+import {SavedSetting, SettingStructure} from "../../types";
+function findJsFiles(dir: string): Array<{ name: string, run: (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any}> {
+    let results: Array<{ name: string, run: (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any}> = [];
+    const list = fs.readdirSync(dir);
+    for (const file of list) {
+        const filePath = path.resolve(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            results = results.concat(findJsFiles(filePath));
+        } else if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.js') {
+            const event = require(filePath)
+            results.push(event.default);
+        }
+    }
+    return results;
+}
+const types = new Map<string, (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any>((findJsFiles('./settingsTypes')).map(type => [type.name, type.run]))
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -22,9 +42,14 @@ export default new SlashCommand({
             content: 'Este comando só pode ser usado em servidores',
             ephemeral: true
         });
-        const setting = guild.settings.find(setting => setting.eventName === interaction.options.getString('configuração'));
+        const setting = guild.settings.find(setting => setting.name === interaction.options.getString('configuração'));
         if (!setting) return interaction.reply({content: 'Configuração não encontrada.. :(', ephemeral: true});
-        client.emit(setting.eventName, interaction, guild);
+        // TODO
+        const type = types.get(setting.type);
+        if (!type) return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
+        const result = await type(interaction, setting).catch(void 0)
+        if (!result) return
+        await client.settingsHandler.setSetting(guild, setting.name, JSON.stringify(result));
     },
     global: true,
     autoCompleteFunc: async ({interaction, client}) => {
@@ -45,7 +70,7 @@ export default new SlashCommand({
         await interaction.respond(settings.map(setting => {
             return {
                 name: `${setting.name}`,
-                value: setting.eventName
+                value: setting.name
             }
         }))
     }

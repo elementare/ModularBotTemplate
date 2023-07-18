@@ -115,18 +115,35 @@ import GuildHandler from "./classes/managers/GuildManager";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
 import {Collection} from "discord.js";
+import {ExtendedClient, Module} from "./types";
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
-    logger.notice('Connecting to MongoDB...');
+    const dbLogger = logger.child({service: `Database`, hexColor: '#33f517'});
+    dbLogger.notice('Connecting to MongoDB...');
     mongoose.connect(process.env.MONGODB_SRV as string, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     } as ConnectOptions).then(() => {
-        logger.notice("Database was successfully connected")
+        dbLogger.notice("Database was successfully connected")
+        client.emit('dbReady');
     }).catch(err => {
-        logger.crit(err);
+        dbLogger.crit(err);
         throw new Error(err);
     });
+
+    client.once('fullyReady', async () => {
+        const eClient = client as ExtendedClient;
+        eClient.cachedEvents.map(async (event, key) => {
+
+            dbLogger.info(`Loading events for module ${chalk.green(key)}`);
+            const module = eClient.modules.get(key) as Module
+            for (const listener of event) {
+                client.on(listener.event, listener.func.bind(null, client, module.logger));
+                dbLogger.info(`Loaded event ${chalk.green(listener.event)} for module ${chalk.green(key)}`);
+            }
+        })
+    })
+
     client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
     client.guildHandler = new GuildHandler(client);
     client.slashHandler = new SlashManager(client);

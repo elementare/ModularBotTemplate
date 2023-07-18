@@ -1,19 +1,31 @@
 import Guild from "../structs/Guild";
-import {ConfigOption, ExtendedClient} from "../../types";
+import {ConfigOption, DbSetting, ExtendedClient, SavedSetting} from "../../types";
 import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
 import User from "../structs/User";
 
 function getAllSettings (client: ExtendedClient, guildData: any) {
     const settings = client.modules.map((module) => module.settings).flat()
-    const settingsMap = new Collection<string, ConfigOption>()
+    const settingsMap = new Collection<string, SavedSetting>()
     for (const setting of settings) {
-        const settingData = guildData.settings.get(setting.eventName)
+        const settingData = guildData.settings.get(setting.name) as DbSetting
         if (!settingData) {
-            setting.value = JSON.parse(setting.default || 'null')
-            settingsMap.set(setting.eventName, setting)
+            const defaultValue: SavedSetting = {
+                name: setting.name,
+                value: JSON.parse(setting.default || 'null'),
+                permission: setting.permission,
+                type: setting.type,
+                struc: setting,
+            }
+            settingsMap.set(setting.name, defaultValue)
         } else {
-            settingData.value = JSON.parse(settingData.value)
-            settingsMap.set(setting.eventName, settingData)
+            const parsed: SavedSetting = {
+                name: setting.name,
+                value: JSON.parse(settingData.value),
+                permission: setting.permission,
+                type: setting.type,
+                struc: setting,
+            }
+            settingsMap.set(setting.name, parsed)
         }
     }
     return settingsMap
