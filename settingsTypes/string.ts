@@ -18,6 +18,10 @@ export default {
                 .setTitle(`Configurar ${currentConfig.name}`)
                 .setFields([
                     {
+                        name: 'Descrição',
+                        value: `${currentConfig.struc.description}`,
+                    },
+                    {
                         name: 'Valor atual',
                         value: `${currentConfig?.value ?? 'Não definido'}`,
                     }
@@ -41,12 +45,16 @@ export default {
                     .setTitle(`Configurar ${currentConfig.name}`)
                     .setFields([
                         {
+                            name: 'Descrição',
+                            value: `${currentConfig.struc.description}`,
+                        },
+                        {
                             name: 'Valor atual',
                             value: `${currentConfig?.value ?? 'Não definido'}`,
                         }
                     ])
                     .setColor(`#ffffff`)
-                    .setFooter({ text: 'Você tem 30 segundos para mandar o novo valor' })
+                    .setFooter({text: 'Você tem 30 segundos para mandar o novo valor'})
                 const empty = new ActionRowBuilder<ButtonBuilder>()
                 await menu.updatePage(embed, empty)
                 const value = await i.channel?.awaitMessages({
@@ -59,26 +67,35 @@ export default {
                         .setTitle(`Configurar ${currentConfig.name}`)
                         .setFields([
                             {
-                                name: 'Valor novo',
+                                name: 'Descrição',
+                                value: `${currentConfig.struc.description}`,
+                            },
+                            {
+                                name: 'Valor atual',
                                 value: `${currentConfig?.value ?? 'Não definido'}`,
                             }
                         ])
                         .setColor(`#ffffff`)
-                        .setFooter({ text: 'Você não enviou um valor a tempo' })
+                        .setFooter({text: 'Você não enviou um valor a tempo'})
                     await menu.updatePage(embed, empty)
                 }
                 const embed2 = new EmbedBuilder()
                     .setTitle(`Configurar ${currentConfig.name}`)
                     .setFields([
                         {
+                            name: 'Descrição',
+                            value: `${currentConfig.struc.description}`,
+                            inline: false
+                        },
+                        {
                             name: 'Valor anterior',
                             value: `${currentConfig?.value ?? 'Não definido'}`,
-                            inline: false
+                            inline: true
                         },
                         {
                             name: 'Novo valor',
                             value: `${value ?? 'Não definido'}`,
-                            inline: false
+                            inline: true
                         }
                     ])
                     .setColor(`#ffffff`)
