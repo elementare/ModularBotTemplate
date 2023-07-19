@@ -41,7 +41,7 @@ export default {
                 fetchReply: true
             })
             const menu = new EmbedMenu(embed, row, msg, interaction.user.id)
-            menu.on('any', (i: ButtonInteraction) => {
+            menu.on('any', async (i: ButtonInteraction) => {
                 menu.stop()
                 const setting = mappedSchema.get(i.customId)
                 if (!setting) return
@@ -60,11 +60,21 @@ export default {
                     permission: BigInt(8),
                     type: setting.type as any
                 }
-                console.log(currentSetting)
-                if (setting.type === 'complex') {
-                    // TODO
+                row.components.map((value) => {
+                  value.setDisabled(true)
+                  return value
+                })
+                await menu.updatePage(embed, row)
+                if (setting.type === 'complex' && currentSetting.struc.type === 'complex') {
+                    currentSetting.struc.schema = setting.schema
+                    currentSetting.struc.embed = setting.embed
+                    await type.run(i as any, types, currentSetting).then((value: any) => {
+                        const values = currentConfig.value ?? {}
+                        values[setting.name] = value
+                        return resolve(values)
+                    }).catch(() => {})
                 } else {
-                    type.run(i as any, types, currentSetting).then((value: any) => {
+                    await type.run(i as any, types, currentSetting).then((value: any) => {
                         const values = currentConfig.value ?? {}
                         values[setting.name] = value
                         return resolve(values)
