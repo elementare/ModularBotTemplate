@@ -11,7 +11,7 @@ import {EmbedMenu} from "../classes/structs/EmbedMenu";
 
 
 export default {
-    name: 'string',
+    name: 'number',
     run: (interaction: ChatInputCommandInteraction, types: typeFile[], currentConfig: SavedSetting) => {
         return new Promise(async (resolve, reject) => {
             const embed = new EmbedBuilder()
@@ -54,7 +54,7 @@ export default {
                         }
                     ])
                     .setColor(`#ffffff`)
-                    .setFooter({text: 'Você tem 30 segundos para mandar o novo valor'})
+                    .setFooter({text: 'Você tem 30 segundos para mandar o novo valor numérico'})
                 const empty = new ActionRowBuilder<ButtonBuilder>()
                 await menu.updatePage(embed, empty)
                 const value = await i.channel?.awaitMessages({
@@ -78,6 +78,26 @@ export default {
                         .setColor(`#ffffff`)
                         .setFooter({text: 'Você não enviou um valor a tempo'})
                     await menu.updatePage(embed, empty)
+                    return reject('Não enviou um valor a tempo')
+                }
+                const number = parseInt(value ?? '')
+                if (isNaN(number)) {
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Configurar ${currentConfig.name}`)
+                        .setFields([
+                            {
+                                name: 'Descrição',
+                                value: `${currentConfig.struc.description}`,
+                            },
+                            {
+                                name: 'Valor atual',
+                                value: `${currentConfig?.value ?? 'Não definido'}`,
+                            }
+                        ])
+                        .setColor(`#ffffff`)
+                        .setFooter({text: 'Você não enviou um valor numérico'})
+                    await menu.updatePage(embed, empty)
+                    return reject('Não é um número')
                 }
                 const embed2 = new EmbedBuilder()
                     .setTitle(`Configurar ${currentConfig.name}`)
@@ -100,8 +120,7 @@ export default {
                     ])
                     .setColor(`#ffffff`)
                 await menu.updatePage(embed2, empty)
-                menu.stop()
-                resolve(value)
+                resolve(number)
             })
         })
     }

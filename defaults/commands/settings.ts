@@ -8,9 +8,9 @@ import fuse from "fuse.js";
 import {Logger} from "winston";
 import fs from "fs";
 import path from "path";
-import {SavedSetting, SettingStructure} from "../../types";
-function findJsFiles(dir: string): Array<{ name: string, run: (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any}> {
-    let results: Array<{ name: string, run: (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any}> = [];
+import {SavedSetting, SettingStructure, typeFile} from "../../types";
+function findJsFiles(dir: string): Array<typeFile> {
+    let results: Array<typeFile> = [];
     const list = fs.readdirSync(dir);
     for (const file of list) {
         const filePath = path.resolve(dir, file);
@@ -24,7 +24,8 @@ function findJsFiles(dir: string): Array<{ name: string, run: (interaction: Chat
     }
     return results;
 }
-const types = new Map<string, (interaction: ChatInputCommandInteraction, currentConfig: SavedSetting ) => any>((findJsFiles('./settingsTypes')).map(type => [type.name, type.run]))
+const typesArr = findJsFiles('./settingsTypes')
+const types = new Map<string, (interaction: ChatInputCommandInteraction, types: typeFile[] ,currentConfig: SavedSetting ) => any>((typesArr).map(type => [type.name, type.run]))
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -47,7 +48,7 @@ export default new SlashCommand({
         // TODO
         const type = types.get(setting.type);
         if (!type) return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
-        const result = await type(interaction, setting).catch(void 0)
+        const result = await type(interaction,typesArr, setting).catch(() => undefined)
         if (!result) return
         await client.settingsHandler.setSetting(guild, setting.name, JSON.stringify(result));
     },

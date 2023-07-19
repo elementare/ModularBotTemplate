@@ -40,14 +40,17 @@ module.exports = async (client: Client, logger: Logger): Promise<{
             schema: {
                 cu: {
                     name: 'cu',
-                    type: 'string'
+                    type: 'string',
+                    description: 'Example setting 3',
                 },
                 cu2: {
                     name: 'cu2',
-                    type: 'number'
+                    type: 'number',
+                    description: 'Example setting 3'
                 },
                 cu3: {
                     name: 'cu3',
+                    description: 'Example setting 3',
                     type: 'complex',
                     embed: {
                         title: 'Example embed',
@@ -57,7 +60,8 @@ module.exports = async (client: Client, logger: Logger): Promise<{
                     schema: {
                         cu: {
                             name: 'cu',
-                            type: 'string'
+                            type: 'string',
+                            description: 'Example setting 3',
                         }
                     }
                 }

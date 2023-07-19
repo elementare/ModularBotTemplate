@@ -8,7 +8,7 @@ import {
     ClientEvents,
     Collection,
     GuildMember,
-    Message, PermissionResolvable,
+    Message,
     Role,
     SlashCommandBuilder,
     VoiceState
@@ -22,6 +22,7 @@ import Command from "./classes/structs/Command";
 import SlashCommand from "./classes/structs/SlashCommand";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
+
 type configFunc = (args: {
     client: ExtendedClient,
     logger: Logger,
@@ -34,6 +35,7 @@ type EncodableJSON = string | {
 }
 
 type ConfigOption = SettingStructure
+
 /*
 {
     name: string,
@@ -211,6 +213,7 @@ interface Event<K extends keyof ExtendedClientEvents> {
     readonly event: K,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: ExtendedClientEvents[K]) => void
 }
+
 interface DynamicEvent {
     readonly event: string,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
@@ -267,7 +270,12 @@ type GenericPrimitiveOption<K extends keyof PrimitiveOptions> = {
     value?: ReturnOptions[K],
     updateFunction?: configFunc
 }
-type GenericOption = GenericPrimitiveOption<keyof PrimitiveOptions> | SelectOption | ListOption | ObjectOption | ButtonOption
+type GenericOption =
+    GenericPrimitiveOption<keyof PrimitiveOptions>
+    | SelectOption
+    | ListOption
+    | ObjectOption
+    | ButtonOption
 
 type ObjectOption = {
     name: string,
@@ -320,26 +328,24 @@ type ListOption = {
 
 type SettingStructureBaseTypes = "string" | "number" | "boolean"
 type SettingStructureTypesAdditions = "arr"
-type SettingStructureTypesFullNonComplex = `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}` | SettingStructureBaseTypes
+type SettingStructureTypesFullNonComplex =
+    `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}`
+    | SettingStructureBaseTypes
 
 type SchemaSetting = {
-        name: string,
-        type: SettingStructureTypesFullNonComplex
-    } | {
-        name: string,
-        type: "complex" | "complex-arr",
-        embed: any
-        schema: {
-            [key: string]: SchemaSetting
-        }
-    }
-type SettingStructure = {
-    name: string
+    name: string,
+    type: SettingStructureTypesFullNonComplex,
     description: string
-    type: SettingStructureTypesFullNonComplex
-    default?: any,
-    permission: any
 } | {
+    name: string,
+    type: "complex" | "complex-arr",
+    embed: any
+    schema: {
+        [key: string]: SchemaSetting
+    },
+    description: string
+}
+type ComplexSetting = {
     name: string,
     description: string,
     type: "complex" | "complex-arr"
@@ -350,6 +356,14 @@ type SettingStructure = {
     default?: any,
     permission: bigint
 }
+type SettingStructure = {
+    name: string
+    description: string
+    type: SettingStructureTypesFullNonComplex
+    default?: any,
+    permission: bigint
+} | ComplexSetting
+
 type SavedSetting = {
     name: string,
     value: any,
@@ -360,4 +374,8 @@ type SavedSetting = {
 type DbSetting = {
     name: string,
     value: any
+}
+type typeFile = {
+    name: string,
+    run: (interaction: ChatInputCommandInteraction, types: typeFile[], currentConfig: SavedSetting) => any
 }

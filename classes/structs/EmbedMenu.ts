@@ -47,6 +47,7 @@ export class EmbedMenu extends EventEmitter {
             } else {
                 const eventName = interaction.customId.split('-')[0]
                 this.emit(eventName, interaction)
+                this.emit('any', interaction)
             }
 
         })
