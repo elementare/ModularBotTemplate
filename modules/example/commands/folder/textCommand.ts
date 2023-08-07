@@ -4,11 +4,10 @@ import {inspect} from "util";
 export default new Command({
     name: 'eval',
     aliases: [],
-    description: 'Comer alguém',
-    howToUse: 'comer',
-    func: async ({logger, message, args, client}) => {
+    description: 'evaluate a expression',
+    howToUse: 'eval <code>',
+    func: async ({ message, args, client}) => {
         if (!message.member) return message.reply('This command can only be used in a guild');
-        logger.notice(`Comer command executed`);
         let code = args.join(" ").replace(/```(js)?/g, '')
         if (!code) return message.reply('Please Provide Some Code to Evaluate!');
         const user = await client.profileHandler.fetch(message.member.id, message.guild!.id)

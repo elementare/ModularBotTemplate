@@ -1,31 +1,12 @@
 import SlashCommand from "../../classes/structs/SlashCommand";
 import {
     SlashCommandBuilder,
-    ComponentType,
-    PermissionsBitField, ChatInputCommandInteraction
+    PermissionsBitField,
+    GuildTextBasedChannel
 } from "discord.js";
 import fuse from "fuse.js";
-import {Logger} from "winston";
-import fs from "fs";
-import path from "path";
-import {SavedSetting, SettingStructure, typeFile} from "../../types";
-function findJsFiles(dir: string): Array<typeFile> {
-    let results: Array<typeFile> = [];
-    const list = fs.readdirSync(dir);
-    for (const file of list) {
-        const filePath = path.resolve(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-            results = results.concat(findJsFiles(filePath));
-        } else if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.js') {
-            const event = require(filePath)
-            results.push(event.default);
-        }
-    }
-    return results;
-}
-const typesArr = findJsFiles('./settingsTypes')
-const types = new Map<string, (interaction: ChatInputCommandInteraction, types: typeFile[] ,currentConfig: SavedSetting ) => any>((typesArr).map(type => [type.name, type.run]))
+import {InteractionView} from "../../utils/InteractionView";
+import {typeFile} from "../../types";
 
 export default new SlashCommand({
     data: new SlashCommandBuilder()
@@ -45,12 +26,34 @@ export default new SlashCommand({
         });
         const setting = guild.settings.find(setting => setting.name === interaction.options.getString('configuração'));
         if (!setting) return interaction.reply({content: 'Configuração não encontrada.. :(', ephemeral: true});
-        // TODO
-        const type = types.get(setting.type);
-        if (!type) return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
-        const result = await type(interaction,typesArr, setting).catch(() => undefined)
-        if (!result) return
-        await client.settingsHandler.setSetting(guild, setting.name, JSON.stringify(result));
+        const typeSplit = setting.type.split('-');
+        const baseTypeName = typeSplit[0];
+        const modifier = typeSplit[1];
+        const view = new InteractionView(interaction, interaction.channel as GuildTextBasedChannel, client, {
+            filter: (i) => i.user.id === interaction.user.id,
+        })
+
+        // This is so if you have a custom array type for a certain type it gets used or if its just o normal type without a modifier, it uses the normal type
+        if (client.typesCollection.has(setting.type)) {
+            const type = client.typesCollection.get(setting.type);
+            if (!type) return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
+            const result = await type.run(view,Array.from(client.typesCollection.values()), setting).catch(() => undefined)
+            if (!result) return
+            await client.settingsHandler.setSetting(guild, setting.name, JSON.stringify(result));
+            return
+        }
+
+
+        if (modifier && client.typesCollection.has(baseTypeName)) {
+            const baseType = client.typesCollection.get(baseTypeName) as typeFile;
+            const modifierType = baseType.complex ? client.typesCollection.get('complex-arr') : client.typesCollection.get(modifier);
+            if (!modifierType) return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
+            const result = await modifierType.run(view,Array.from(client.typesCollection.values()), setting).catch(() => undefined)
+            if (!result) return
+            await client.settingsHandler.setSetting(guild, setting.name, JSON.stringify(result));
+            return
+        }
+        return interaction.reply({content: 'Tipo de configuração não encontrado.. :(', ephemeral: true});
     },
     global: true,
     autoCompleteFunc: async ({interaction, client}) => {

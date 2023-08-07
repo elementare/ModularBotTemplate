@@ -1,29 +1,42 @@
 import Guild from "../structs/Guild";
-import {ConfigOption, DbSetting, ExtendedClient, SavedSetting} from "../../types";
-import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
-import User from "../structs/User";
-
-function getAllSettings (client: ExtendedClient, guildData: any) {
+import {DbSetting, ExtendedClient, SavedSetting, SettingStructure} from "../../types";
+import { Collection } from "discord.js";
+import { Guild as discordGuild } from "discord.js";
+function parseSettingValue(setting: string, type: string, client: ExtendedClient, guildData: any, guild: discordGuild) {
+    const typeObj = client.typesCollection.get(type)
+    if (!typeObj) return JSON.parse(setting)
+    if (typeObj.parse) {
+        return typeObj.parse(setting, client, guildData, guild)
+    }
+    return JSON.parse(setting)
+}
+function getType(setting: SettingStructure) {
+    return setting.type
+}
+function getAllSettings (client: ExtendedClient, guildData: any, guild: discordGuild) {
     const settings = client.modules.map((module) => module.settings).flat()
     const settingsMap = new Collection<string, SavedSetting>()
     for (const setting of settings) {
         const settingData = guildData.settings.get(setting.name) as DbSetting
+        const type = getType(setting)
         if (!settingData) {
             const defaultValue: SavedSetting = {
                 name: setting.name,
-                value: JSON.parse(setting.default || 'null'),
+                value: parseSettingValue(setting.default || 'null', type, client, guildData, guild),
                 permission: setting.permission,
-                type: setting.type,
+                type: type,
                 struc: setting,
+                metadata: (setting as any).metadata,
             }
             settingsMap.set(setting.name, defaultValue)
         } else {
             const parsed: SavedSetting = {
                 name: setting.name,
-                value: JSON.parse(settingData.value),
+                value: parseSettingValue(settingData.value, type, client, guildData, guild),
                 permission: setting.permission,
-                type: setting.type,
+                type: type,
                 struc: setting,
+                metadata: (setting as any).metadata,
             }
             settingsMap.set(setting.name, parsed)
         }
@@ -53,7 +66,7 @@ export default class GuildManager {
                 await profile.save()
                 guildData = profile
             }
-            return resolve(new Guild(this.client, guild, guildData, getAllSettings(this.client, guildData)))
+            return resolve(new Guild(this.client, guild, guildData, getAllSettings(this.client, guildData, guild)))
         })
     }
 
@@ -65,7 +78,7 @@ export default class GuildManager {
             for (const guildProfile of guildProfiles) {
                 const guild = await this.client.guilds.fetch(guildProfile.id)
                 if (!guild) continue
-                guilds.push(new Guild(this.client, guild, guildProfile, getAllSettings(this.client, guildProfile)))
+                guilds.push(new Guild(this.client, guild, guildProfile, getAllSettings(this.client, guildProfile, guild)))
             }
             resolve( guilds )
         })

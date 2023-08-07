@@ -93,6 +93,9 @@ export class EmbedMenu extends EventEmitter {
     stop() {
         this.collector.stop()
     }
+    restart() {
+        this.collector.resetTimer()
+    }
 
     setDisabled(customId: string, disabled: boolean) {
         return new Promise<void>(async (resolve, reject) => {

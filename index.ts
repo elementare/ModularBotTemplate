@@ -114,8 +114,25 @@ import UserHandler from "./classes/managers/UserManager";
 import GuildHandler from "./classes/managers/GuildManager";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
-import {Collection} from "discord.js";
-import {ExtendedClient, Module} from "./types";
+import {ChatInputCommandInteraction, Collection} from "discord.js";
+import {ExtendedClient, Module, SavedSetting, typeFile} from "./types";
+
+function findJsFiles(dir: string): Array<typeFile> {
+    let results: Array<typeFile> = [];
+    const list = fs.readdirSync(dir);
+    for (const file of list) {
+        const filePath = path.resolve(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            results = results.concat(findJsFiles(filePath));
+        } else if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.js') {
+            const event = require(filePath)
+            results.push(event.default);
+        }
+    }
+    return results;
+}
+
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     const dbLogger = logger.child({service: `Database`, hexColor: '#33f517'});
@@ -143,7 +160,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
             }
         })
     })
-
+    client.typesCollection = new Collection<string, typeFile>((findJsFiles('./settings/DefaultTypes')).map(type => [type.name, type]))
     client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
     client.guildHandler = new GuildHandler(client);
     client.slashHandler = new SlashManager(client);
