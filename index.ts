@@ -132,7 +132,7 @@ function findJsFiles(dir: string): Array<typeFile> {
     }
     return results;
 }
-
+client.setMaxListeners(30)
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     const dbLogger = logger.child({service: `Database`, hexColor: '#33f517'});

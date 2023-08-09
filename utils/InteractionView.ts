@@ -43,6 +43,7 @@ export class InteractionView extends EventEmitter {
     private msgId: string = "0";
     private options: {ephemeral?: boolean} = {ephemeral: false}
     private viewId: string = genRandomHexId()
+    private clonedInstances: InteractionView[] = []
     constructor(interaction: RepliableInteraction, channel: TextBasedChannel, client: ExtendedClient, extendedOptions?: ExtraOptions) {
         super()
         this.channel = channel
@@ -63,8 +64,10 @@ export class InteractionView extends EventEmitter {
             }
         })
         this.client.on("messageDelete", (deleted) => {
+            this.destroy()
             super.emit("delete", deleted)
         })
+
     }
     public get Channel() {
         return this.channel
@@ -74,6 +77,14 @@ export class InteractionView extends EventEmitter {
     }
     public get Id() {
         return this.msgId
+    }
+    public async setTimeout(ms: number) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                this.destroy()
+                resolve(true)
+            }, ms)
+        })
     }
     public setMsgId(id: string) {
         this.msgId = id
@@ -111,9 +122,13 @@ export class InteractionView extends EventEmitter {
     public clone() {
         const cloned = new InteractionView(this.interaction, this.channel, this.client, {ephemeral: this.options.ephemeral, filter: this.extraFilter})
         cloned.setMsgId(this.msgId)
+        this.clonedInstances.push(cloned)
         return cloned
     }
     public destroy() {
+        for (const cloned of this.clonedInstances) {
+            cloned.destroy()
+        }
         this.removeAllListeners()
     }
 }

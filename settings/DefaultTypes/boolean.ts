@@ -70,6 +70,8 @@ export default {
                     embeds: [embed],
                     components: []
                 })
+                view.destroy()
+                view = undefined as any // Destroying view to prevent memory leaks
                 resolve(newValue)
             })
         })

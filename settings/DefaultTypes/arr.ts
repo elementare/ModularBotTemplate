@@ -116,6 +116,8 @@ export default {
                     embeds: [],
                     components: []
                 })
+                view.destroy()
+                view = undefined as any // Destroying view to prevent memory leaks
                 resolve(current)
             })
             view.on('add', async (i) => {

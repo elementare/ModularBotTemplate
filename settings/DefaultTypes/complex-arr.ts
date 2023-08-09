@@ -65,11 +65,8 @@ export default {
                 components: rowArr
             })
             view.on('select', async (i) => {
-                console.log(i.values)
                 const index = parseInt(i.values[0])
                 const value = current[index]
-                console.log(index)
-                console.log(value)
                 if (!value) return
                 const type = types.find((value) => value.name === baseTypeStr)
                 if (!type) return
@@ -94,7 +91,7 @@ export default {
                 const result = await type.run(cloned, types, valueProcessed).catch(() => undefined)
                 cloned.destroy()
                 if (!result) return
-                current[index] = result.value
+                current[index] = result
                 // Updating embed
                 const values = parseSettingToArrayFields(current, metadataFn)
                 embed.setFields(values)
@@ -104,12 +101,13 @@ export default {
                 })
             })
             view.on('confirm', async (i) => {
-                console.log('main confirm')
                 await view.update({
                     content: 'Alterações confirmadas!',
                     embeds: [],
                     components: []
                 })
+                view.destroy()
+                view = undefined as any // Destroying view to prevent memory leaks
                 resolve(current)
             })
             view.on('add', async (i) => {
@@ -136,6 +134,8 @@ export default {
                 const result = await type.run(clonedView, types, valueProcessed).catch(() => {})
                 clonedView.destroy()
                 if (!result) return
+                console.log(`Result:`)
+                console.log(result)
                 current.push(result)
                 const values = parseSettingToArrayFields(current, metadataFn)
                 if (current.length === 1) { // Add a menu if not exists

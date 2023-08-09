@@ -44,7 +44,7 @@ export default {
                 components: [buttons]
             })
             view.once('set', async (i: ButtonInteraction) => {
-                // await i.deferUpdate()
+                await i.deferUpdate()
                 const embed = new EmbedBuilder()
                     .setTitle(`Configurar ${currentConfig.name}`)
                     .setFields([
@@ -135,6 +135,8 @@ export default {
                     embeds: [embed2],
                     components: []
                 })
+                view.destroy()
+                view = undefined as any // Destroying view to prevent memory leaks
                 resolve(number)
             })
         })

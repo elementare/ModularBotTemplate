@@ -32,6 +32,14 @@ export default new SlashCommand({
         const view = new InteractionView(interaction, interaction.channel as GuildTextBasedChannel, client, {
             filter: (i) => i.user.id === interaction.user.id,
         })
+        view.setTimeout(240000).then(() => {
+            view.destroy()
+            view.update({
+                embeds: [],
+                components: [],
+                content: 'Tempo esgotado'
+            })
+        })
 
         // This is so if you have a custom array type for a certain type it gets used or if its just o normal type without a modifier, it uses the normal type
         if (client.typesCollection.has(setting.type)) {
