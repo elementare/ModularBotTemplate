@@ -1,6 +1,6 @@
-import {Client} from "discord.js";
+import {Client, PermissionsBitField} from "discord.js";
 import {Logger} from "winston";
-import {BaseModuleInterfacer, ConfigOption} from "../../types";
+import {BaseModuleInterfacer, ConfigOption, SettingStructure} from "../../types";
 
 
 module.exports = async (client: Client, logger: Logger): Promise<{
@@ -14,13 +14,158 @@ module.exports = async (client: Client, logger: Logger): Promise<{
         }
 
     }(logger);
-    const settings: Array<ConfigOption> = [
+    const settings: Array<SettingStructure> = [
         {
-            name: 'example',
+            name: 'cu',
             description: 'Example setting',
-            eventName: 'example'
+            type: 'string',
+            permission: PermissionsBitField.Flags.Administrator,
+        },
+        {
+            name: 'cu5',
+            description: 'Example setting',
+            type: 'string-arr',
+            permission: PermissionsBitField.Flags.Administrator,
+        },
+        {
+            name: 'cu2',
+            description: 'Example setting 2',
+            type: 'boolean',
+            permission: PermissionsBitField.Flags.Administrator,
+        },
+        {
+            name: 'cu3',
+            description: 'Example setting 3',
+            type: "complex",
+            embed: {
+                title: 'Example embed',
+                description: 'Example embed description',
+                color: '#ff0000',
+            },
+            permission: PermissionsBitField.Flags.Administrator,
+            schema: {
+                cu: {
+                    name: 'cu',
+                    type: 'string',
+                    description: 'Example setting 3',
+                },
+                cu2: {
+                    name: 'cu2',
+                    type: 'number',
+                    description: 'Example setting 3',
+
+                },
+                cu3: {
+                    name: 'cu3',
+                    description: 'Example setting 3',
+                    type: 'complex',
+                    embed: {
+                        title: 'Example embed',
+                        description: 'Example embed description',
+                        color: '#ff0000',
+                    },
+                    schema: {
+                        cu: {
+                            name: 'cu',
+                            type: 'embed',
+                            description: 'Example setting 3',
+
+                        }
+                    }
+                }
+            }
+        },
+        {
+            name: 'complexarr-simple',
+            description: 'Example setting 3',
+            type: "complex-arr",
+            embed: {
+                title: 'Example embed',
+                description: 'Example embed description',
+                color: '#ff0000',
+            },
+            permission: PermissionsBitField.Flags.Administrator,
+            schema: {
+                cu: {
+                    name: 'cu',
+                    type: 'string',
+                    description: 'Example setting 3',
+
+                },
+                cu2: {
+                    name: 'cu2',
+                    type: 'number',
+                    description: 'Example setting 3',
+
+                },
+                cu3: {
+                    name: 'cu3',
+                    description: 'Example setting 3',
+                    type: 'boolean'
+                }
+            }
+        },
+        {
+            name: 'complexarr-complex',
+            description: 'Example setting 3',
+            type: "complex-arr",
+            embed: {
+                title: 'Example embed',
+                description: 'Example embed description',
+                color: '#ff0000',
+            },
+            permission: PermissionsBitField.Flags.Administrator,
+            schema: {
+                cu: {
+                    name: 'cu',
+                    type: 'string',
+                    description: 'Example setting 3',
+
+                },
+                cu2: {
+                    name: 'cu2',
+                    type: 'number',
+                    description: 'Example setting 3',
+
+                },
+                cu3: {
+                    name: 'cu3',
+                    description: 'Example setting 3',
+                    type: 'complex',
+                    embed: {
+                        title: 'Example embed',
+                        description: 'Example embed description',
+                        color: '#ff0000',
+                    },
+                    schema: {
+                        cu: {
+                            name: 'cu',
+                            type: 'string',
+                            description: 'Example setting 3',
+
+                        }
+                    }
+                },
+                cu4: {
+                    name: 'cu4',
+                    description: 'Example setting 3',
+                    type: 'complex-arr',
+                    embed: {
+                        title: 'Example embed',
+                        description: 'Example embed description',
+                        color: '#ff0000',
+                    },
+                    schema: {
+                        cu: {
+                            name: 'cu',
+                            type: 'string',
+                            description: 'Example setting 3'
+                        }
+                    }
+                }
+            }
         }
-        ]
+    ]
     return {
         interfacer: interfacer,
         settings: settings

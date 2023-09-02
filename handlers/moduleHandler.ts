@@ -34,7 +34,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
     userData: mongoseSchemaData,
     guildData: mongoseSchemaData,
     modules: discord.Collection<string, Module>
-}> {
+}>  {
     client.once('dbReady', async () => {
         dbReady = true;
     })

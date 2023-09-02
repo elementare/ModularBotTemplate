@@ -8,10 +8,11 @@ import {
     ClientEvents,
     Collection,
     GuildMember,
-    Message, PermissionResolvable,
+    Message,
     Role,
     SlashCommandBuilder,
-    VoiceState
+    VoiceState,
+    Guild as DiscordGuild, APIEmbed, BaseMessageOptions
 } from "discord.js";
 import ProfileManager from "./classes/managers/UserManager";
 import GuildManager from "./classes/managers/GuildManager"
@@ -22,6 +23,9 @@ import Command from "./classes/structs/Command";
 import SlashCommand from "./classes/structs/SlashCommand";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
+import {InteractionView} from "./utils/InteractionView";
+import {MessageView} from "./utils/MessageView";
+
 type configFunc = (args: {
     client: ExtendedClient,
     logger: Logger,
@@ -33,7 +37,10 @@ type EncodableJSON = string | {
     toString(): string;
 }
 
-type ConfigOption = {
+type ConfigOption = SettingStructure
+
+/*
+{
     name: string,
     description?: string,
     eventName: string,
@@ -48,7 +55,7 @@ type ConfigOption = {
     value: EncodableJSON<any>,
     default?: string,
 }
-
+ */
 class BaseModuleInterfacer {
     [key: string]: any;
 }
@@ -89,6 +96,8 @@ interface SlashCommandAutoCompleteArgs {
 interface ExtendedClient extends Client {
     logger: Logger;
     commands: CommandsMap;
+
+    typesCollection: Collection<string, typeFile>;
 
     profileHandler: ProfileManager;
 
@@ -209,6 +218,7 @@ interface Event<K extends keyof ExtendedClientEvents> {
     readonly event: K,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: ExtendedClientEvents[K]) => void
 }
+
 interface DynamicEvent {
     readonly event: string,
     readonly func: (client: ExtendedClient, logger: Logger, ...args: any[]) => void
@@ -265,7 +275,12 @@ type GenericPrimitiveOption<K extends keyof PrimitiveOptions> = {
     value?: ReturnOptions[K],
     updateFunction?: configFunc
 }
-type GenericOption = GenericPrimitiveOption<keyof PrimitiveOptions> | SelectOption | ListOption | ObjectOption | ButtonOption
+type GenericOption =
+    GenericPrimitiveOption<keyof PrimitiveOptions>
+    | SelectOption
+    | ListOption
+    | ObjectOption
+    | ButtonOption
 
 type ObjectOption = {
     name: string,
@@ -315,3 +330,82 @@ type ListOption = {
     default?: Array<Options["list"]>,
     updateFunction?: configFunc
 }
+
+type SettingStructureBaseTypes = "string" | "number" | "boolean" | "embed"
+type SettingStructureTypesAdditions = "arr"
+type SettingStructureTypesFullNonComplex =
+    `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}`
+    | SettingStructureBaseTypes
+
+type SchemaSetting = {
+    name: string,
+    type: SettingStructureTypesFullNonComplex,
+    description: string,
+} | SchemaComplexSetting  | SchemaCustomSetting
+type SchemaCustomSetting = {
+    name: string,
+    type: Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">
+    description: string,
+    metadata?: any
+}
+type SchemaComplexSetting = {
+    name: string,
+    type: "complex" | "complex-arr",
+    embed: any
+    schema: {
+        [key: string]: SchemaSetting
+    },
+    description: string,
+    metadata: (value: any) => string | undefined // This is a function for defining fields in the metadata embed
+}
+type ComplexSetting = {
+    name: string,
+    description: string,
+    type: "complex" | "complex-arr"
+    embed: any
+    schema: {
+        [key: string]: SchemaSetting
+    }
+    default?: any,
+    permission: bigint
+}
+type CustomSetting = {
+    name: string,
+    type: Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">
+    description: string,
+    default?: any,
+    permission: bigint,
+    metadata?: any
+}
+type SettingStructure = {
+    name: string
+    description: string
+    type: SettingStructureTypesFullNonComplex
+    default?: any,
+    permission: bigint
+} | ComplexSetting | CustomSetting
+
+
+type SavedSetting = {
+    name: string,
+    value: any,
+    permission: bigint,
+    type: SettingStructureTypesFullNonComplex | "complex" | "complex-arr" | Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">,
+    struc: SettingStructure
+    metadata?: any
+}
+type DbSetting = {
+    name: string,
+    value: any
+}
+type typeFile = {
+    name: string,
+    complex: boolean,
+    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any) => any,
+    parse?: (config: string, client: ExtendedClient, guildData: any, guild: DiscordGuild) => any,
+    parseSettingToArrayFields?: (value: any) => string,
+}
+
+type MessageViewUpdate = BaseMessageOptions
+
+type AnyView = MessageView | InteractionView
