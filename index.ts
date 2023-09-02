@@ -114,8 +114,8 @@ import UserHandler from "./classes/managers/UserManager";
 import GuildHandler from "./classes/managers/GuildManager";
 import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
-import {ChatInputCommandInteraction, Collection} from "discord.js";
-import {ExtendedClient, Module, SavedSetting, typeFile} from "./types";
+import { Collection} from "discord.js";
+import {ExtendedClient, Module, typeFile} from "./types";
 
 function findJsFiles(dir: string): Array<typeFile> {
     let results: Array<typeFile> = [];
@@ -162,7 +162,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     })
     client.typesCollection = new Collection<string, typeFile>((findJsFiles('./settings/DefaultTypes')).map(type => [type.name, type]))
     client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
-    client.guildHandler = new GuildHandler(client);
+    client.guildHandler = new GuildHandler(client, logger.child({service: 'Guild Handler', hexColor: '#bbaaff'}));
     client.slashHandler = new SlashManager(client);
     client.cachedEvents = new Collection();
     client.settingsHandler = new SettingsManager(client, logger.child({service: 'Settings Manager', hexColor: '#bbaaff'}));
