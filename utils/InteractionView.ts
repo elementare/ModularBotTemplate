@@ -2,16 +2,18 @@ import {ExtendedClient, MessageViewUpdate} from "../types";
 import {
     ActionRowBuilder,
     AnyComponentBuilder,
-    ButtonBuilder,
+    ButtonBuilder, CacheType,
     Message,
     RepliableInteraction,
     TextBasedChannel
 } from "discord.js";
 import {EventEmitter} from "events";
+import {Awaitable} from "@discordjs/util";
 
 type ExtraOptions =  {
     ephemeral?: boolean,
     filter?: (interaction: RepliableInteraction) => boolean
+    timeout?: number
 }
 
 
@@ -21,7 +23,11 @@ function genRandomHexId(): string {
 function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
     return rows.map((row) => {
         row.setComponents(row.components.map((component) => {
-            component.setCustomId((component.toJSON() as any).custom_id + '-' + id)
+            const customId = (component.toJSON() as any).custom_id
+            const split = customId.split("-")
+            const viewId = split.pop()
+            if (viewId === id) return component
+            component.setCustomId( customId + '-' + id)
             return component
         }))
         return row
@@ -43,7 +49,9 @@ export class InteractionView extends EventEmitter {
     private msgId: string = "0";
     private options: {ephemeral?: boolean} = {ephemeral: false}
     private viewId: string = genRandomHexId()
-    private clonedInstances: InteractionView[] = []
+    private timeout: NodeJS.Timeout | null = null
+    private readonly interactionListener: (interaction: RepliableInteraction<CacheType>) => Awaitable<void>
+    private readonly messageDeleteListener: (message: Message) => Awaitable<void>
     constructor(interaction: RepliableInteraction, channel: TextBasedChannel, client: ExtendedClient, extendedOptions?: ExtraOptions) {
         super()
         this.channel = channel
@@ -51,22 +59,30 @@ export class InteractionView extends EventEmitter {
         this.interaction = interaction
         if (extendedOptions?.ephemeral) this.options = extendedOptions
         if (extendedOptions?.filter) this.extraFilter = extendedOptions.filter
-        this.client.on("interactionCreate", (interaction) => {
+        if (extendedOptions?.timeout !== 0) this.setTimeout(extendedOptions?.timeout || 60000)
+        this.interactionListener = (interaction) => {
             if ((interaction as any).message && (interaction as any).message.id === this.msgId) {
+                const split = (interaction as any).customId.split("-")
+                const id = split.shift()
+                console.log(`interaction, id:${id}, currentViewId:${this.viewId},event:${(interaction as any).customId}`)
                 if (this.extraFilter((interaction as RepliableInteraction))) {
-                    const split = (interaction as any).customId.split("-")
-                    const id = split.shift()
+                    if (this.timeout) this.timeout.refresh()
+
                     const viewId = split.pop()
                     if (viewId !== this.viewId) return // This ensures that clones views don't emit events in the original view
                     super.emit(id, interaction, split)
                     super.emit("any", interaction)
                 }
             }
-        })
-        this.client.on("messageDelete", (deleted) => {
-            this.destroy()
-            super.emit("delete", deleted)
-        })
+        }
+        this.messageDeleteListener = (deleted) => {
+            if (deleted.id === this.msgId) {
+                this.destroy("deleted")
+                super.emit("delete", deleted)
+            }
+        }
+        this.client.on("interactionCreate", this.interactionListener as any)
+        this.client.on("messageDelete", this.messageDeleteListener as any)
 
     }
     public get Channel() {
@@ -78,13 +94,10 @@ export class InteractionView extends EventEmitter {
     public get Id() {
         return this.msgId
     }
-    public async setTimeout(ms: number) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                this.destroy()
-                resolve(true)
-            }, ms)
-        })
+    public setTimeout(ms: number) {
+        if (this.timeout) clearTimeout(this.timeout)
+        this.timeout = setTimeout(() => { this.destroy('time')}, ms)
+        return this.timeout
     }
     public setMsgId(id: string) {
         this.msgId = id
@@ -105,7 +118,6 @@ export class InteractionView extends EventEmitter {
                     return resolve(false)
                 })
             } else {
-                console.log("Not replied")
                 await this.interaction.reply({
                     ...view,
                     fetchReply: true,
@@ -122,13 +134,15 @@ export class InteractionView extends EventEmitter {
     public clone() {
         const cloned = new InteractionView(this.interaction, this.channel, this.client, {ephemeral: this.options.ephemeral, filter: this.extraFilter})
         cloned.setMsgId(this.msgId)
-        this.clonedInstances.push(cloned)
         return cloned
     }
-    public destroy() {
-        for (const cloned of this.clonedInstances) {
-            cloned.destroy()
-        }
+
+    public destroy(reason?: string) {
+        if (this.timeout) clearTimeout(this.timeout)
+        super.emit("end", reason || "destroy")
+        console.log("destroyed-" + this.viewId + "-" + reason)
         this.removeAllListeners()
+        this.client.removeListener("interactionCreate", this.interactionListener as any)
+        this.client.removeListener("messageDelete", this.messageDeleteListener as any)
     }
 }

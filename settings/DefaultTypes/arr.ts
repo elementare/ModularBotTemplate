@@ -6,7 +6,6 @@ import {
     StringSelectMenuBuilder
 } from "discord.js";
 import {SavedSetting, typeFile} from "../../types";
-import {EmbedMenu} from "../../utils/EmbedMenu";
 import {InteractionView} from "../../utils/InteractionView";
 
 function parseSettingToArrayFields(current: any[]) {

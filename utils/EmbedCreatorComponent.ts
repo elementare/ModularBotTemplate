@@ -1,6 +1,6 @@
 import {AnyView, MessageViewUpdate} from "../types";
 import {
-    ActionRowBuilder,
+    ActionRowBuilder, APIEmbed,
     ButtonBuilder,
     ButtonStyle,
     ColorResolvable,
@@ -11,7 +11,8 @@ import {
 
 type EmbedCreatorOptions = {
     // Whether there is a button to confirm the current embed and pass the values or to just finish the view and return undefined
-    shouldComplete: boolean
+    shouldComplete?: boolean,
+    data?: APIEmbed
 }
 const Second = 1000
 type Milliseconds = number
@@ -20,6 +21,7 @@ function waitForUserInput(view: AnyView, newView: MessageViewUpdate, expiry: Mil
     deleteCollected?: boolean
 }): Promise<string> {
     return new Promise<string>(async (resolve, reject) => {
+        view = view.clone()
         await view.update(newView)
         const channel = view.Channel
         const collector = channel.createMessageCollector({
@@ -35,12 +37,14 @@ function waitForUserInput(view: AnyView, newView: MessageViewUpdate, expiry: Mil
                 // Deleting images in any situation is a bad idea since discord will delete the image from the server, so even if the delete option is true, it will not delete the image
                 collector.stop()
                 const attachment = m.attachments.first()
+                view.destroy()
                 if (!attachment) return reject('No attachment/message content')
                 resolve(attachment.url)
             }
         })
         collector.on('end', async (_, reason) => {
             if (reason === 'user') return
+            view.destroy()
             reject(reason)
         })
 
@@ -53,7 +57,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
         // This separates the EventEmitter from the original view since I will be using it to update the view
         // And doing it like this helps prevent id collisions
         const newView = view.clone()
-        let embed = new EmbedBuilder()
+        const defaultEmbed = new EmbedBuilder()
             .setTitle(`Placeholder`)
             .setFields([
                 {
@@ -64,6 +68,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             .setColor(`#ffffff`)
             .setFooter({text: `Feito com ❤️`})
             .setAuthor({name: `Criador de Embeds`})
+        let embed = options?.data ? new EmbedBuilder(options.data) : defaultEmbed
 
         const rows: ActionRowBuilder<ButtonBuilder>[] = []
         const controlRow1 = new ActionRowBuilder<ButtonBuilder>()
@@ -138,7 +143,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             .setColor(`#ff0000`)
         newView.on('finish', async (i) => {
             await i.deferUpdate()
-            newView.removeAllListeners()
+            newView.destroy()
             resolve(embed)
         })
 
@@ -157,7 +162,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             }
             embed
                 .setTitle(title)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('description', async (i) => {
             questionEmbed
@@ -170,11 +175,11 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!description) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             embed
                 .setDescription(description)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('color', async (i) => {
             questionEmbed
@@ -187,12 +192,12 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!color) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             if (!color.startsWith('#')) {
                 errEmbed
                     .setDescription(`A cor deve ser um hexadecimal\nExemplo: \`#ffffff\`\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
             try {
@@ -200,12 +205,12 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`A cor deve ser um hexadecimal\nExemplo: \`#ffffff\`\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
             embed
                 .setColor(color as ColorResolvable)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('image', async (i) => {
             questionEmbed
@@ -218,7 +223,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!image) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -226,10 +231,10 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`A imagem deve ser um link válido ou um anexo\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('thumbnail', async (i) => {
             questionEmbed
@@ -242,7 +247,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!thumbnail) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -250,10 +255,10 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`A thumbnail deve ser um link válido ou um anexo\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         /*
           Start of footer buttons
@@ -280,7 +285,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                         .setStyle(ButtonStyle.Danger)
                 ])
             await i.deferUpdate()
-            await view.update({embeds: [footerEmbed], components: [footerRow]})
+            await newView.update({embeds: [footerEmbed], components: [footerRow]})
         })
         newView.on('footerText', async (i) => {
             questionEmbed
@@ -293,11 +298,11 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!footerText) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             embed
                 .setFooter({text: footerText})
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('footerIcon', async (i) => {
             questionEmbed
@@ -310,7 +315,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!footerIcon) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -318,16 +323,16 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`O icone deve ser um link válido ou um anexo\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('footerRemove', async (i) => {
             await i.deferUpdate()
             embed
                 .setFooter(null)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         /*
             End of footer buttons
@@ -356,7 +361,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                         .setStyle(ButtonStyle.Danger)
                 ])
             await i.deferUpdate()
-            await view.update({embeds: [authorEmbed], components: [authorRow]})
+            await newView.update({embeds: [authorEmbed], components: [authorRow]})
         })
         newView.on('authorName', async (i) => {
             questionEmbed
@@ -369,11 +374,11 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!authorName) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             embed
                 .setAuthor({name: authorName})
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('authorIcon', async (i) => {
             questionEmbed
@@ -386,7 +391,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!authorIcon) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -394,16 +399,16 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`O icone deve ser um link válido ou um anexo\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('authorRemove', async (i) => {
             await i.deferUpdate()
             embed
                 .setAuthor(null)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         /*
             End of author buttons
@@ -437,7 +442,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             const fieldRow = new ActionRowBuilder<ButtonBuilder>()
                 .setComponents(buttonArr)
             await i.deferUpdate()
-            await view.update({embeds: [fieldEmbed], components: [fieldRow]})
+            await newView.update({embeds: [fieldEmbed], components: [fieldRow]})
         })
         newView.on('addField', async (i) => {
             questionEmbed
@@ -450,7 +455,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!fieldName) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             questionEmbed
                 .setDescription(`Qual será o valor do campo?`)
@@ -461,7 +466,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!fieldValue) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -471,10 +476,10 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`O nome e o valor devem ser textos não muito grandes\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('removeField', async (i) => {
             const fieldEmbed = new EmbedBuilder()
@@ -495,13 +500,13 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                         )
                 ])
             await i.deferUpdate()
-            await view.update({embeds: [fieldEmbed], components: [fieldRow]})
+            await newView.update({embeds: [fieldEmbed], components: [fieldRow]})
         })
         newView.on('deleteFieldSelect', async (i) => {
             await i.deferUpdate()
             embed
                 .spliceFields(parseInt(i.values[0]), 1)
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('editField', async (i) => {
             const fieldEmbed = new EmbedBuilder()
@@ -522,7 +527,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                         )
                 ])
             await i.deferUpdate()
-            await view.update({embeds: [fieldEmbed], components: [fieldRow]})
+            await newView.update({embeds: [fieldEmbed], components: [fieldRow]})
         })
         newView.on('editFieldSelect', async (i) => {
             const fieldEmbed = new EmbedBuilder()
@@ -549,7 +554,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                         .setStyle(ButtonStyle.Primary)
                 ])
             await i.deferUpdate()
-            await view.update({embeds: [fieldEmbed], components: [fieldRow]})
+            await newView.update({embeds: [fieldEmbed], components: [fieldRow]})
         })
         newView.on('editFieldName', async (i, args) => {
             questionEmbed
@@ -562,7 +567,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!fieldName) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 embed
@@ -573,10 +578,10 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`O nome deve ser um texto não muito grande\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('editFieldValue', async (i, args) => {
             questionEmbed
@@ -589,7 +594,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!fieldValue) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             const index = parseInt(args[0])
             try {
@@ -602,23 +607,22 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             } catch (e) {
                 errEmbed
                     .setDescription(`O valor deve ser um texto não muito grande\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('editFieldInline', async (i, args) => {
             await i.deferUpdate()
             const index = parseInt(args[0])
             const field = embed.data.fields?.[index]
-            console.log(field)
             embed
                 .spliceFields(index, 1, {
                     name: field?.name as string,
                     value: field?.value as string,
                     inline: !field?.inline
                 })
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
         newView.on('editFieldPosition', async (i, args) => {
             questionEmbed
@@ -631,19 +635,19 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!fieldPosition) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             const position = parseInt(fieldPosition)
             if (isNaN(position)) {
                 errEmbed
                     .setDescription(`A posição deve ser um número entre 1 e ${embed.data.fields?.length}\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
             if (position < 1 || position > (embed.data.fields?.length as number)) {
                 errEmbed
                     .setDescription(`A posição deve ser um número entre 1 e ${embed.data.fields?.length}\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
             embed
@@ -653,7 +657,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                     inline: embed.data.fields?.[parseInt(args[0])].inline as boolean
                 })
                 .spliceFields(parseInt(i.message.interaction?.values[0]), 1)
-            return await view.update({embeds: [embed], components: rows})
+            return await newView.update({embeds: [embed], components: rows})
         })
 
         newView.on('export', async (i) => {
@@ -673,7 +677,7 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
             if (!embedCode) {
                 errEmbed
                     .setDescription(`Você não respondeu a tempo`)
-                return reject(await view.update({embeds: [errEmbed]}))
+                return reject(await newView.update({embeds: [errEmbed]}))
             }
             try {
                 const jsonVar = JSON.parse(embedCode)
@@ -682,23 +686,23 @@ export function EmbedCreator(view: AnyView, filter: (m: Message) => boolean, opt
                 } catch (e) {
                     errEmbed
                         .setDescription(`O código deve ser um JSON válido\nTente novamente`)
-                    await view.update({embeds: [errEmbed], components: rows})
+                    await newView.update({embeds: [errEmbed], components: rows})
                     return
                 }
             } catch (e) {
                 errEmbed
                     .setDescription(`O código deve ser um JSON válido\nTente novamente`)
-                await view.update({embeds: [errEmbed], components: rows})
+                await newView.update({embeds: [errEmbed], components: rows})
                 return
             }
 
-            await view.update({embeds: [embed], components: rows})
+            await newView.update({embeds: [embed], components: rows})
         })
 
 
 
 
-        if (options?.shouldComplete) return resolve(embed)
+        if (!options?.shouldComplete) return resolve(embed)
     })
 
 }

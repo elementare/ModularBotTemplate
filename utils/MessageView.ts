@@ -90,6 +90,9 @@ export class MessageView extends EventEmitter {
             return false
         })
     }
+    public async destroy(reason?: string) {
+        return true
+    }
 
     public clone() {
         return new MessageView(this.message, this.message.channel, this.client, this.extraFilter)

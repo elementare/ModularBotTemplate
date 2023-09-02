@@ -7,7 +7,6 @@ import {
     ButtonInteraction
 } from "discord.js";
 import {SavedSetting, SettingStructure, typeFile} from "../../types";
-import {EmbedMenu} from "../../utils/EmbedMenu";
 import {InteractionView} from "../../utils/InteractionView";
 function generateRandomId(length: number = 8): string {
     if (length <= 0) return '';

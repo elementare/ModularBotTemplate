@@ -85,7 +85,6 @@ export default {
                     components: []
                 })
                 view.destroy()
-                view = undefined as any // Destroying view to prevent memory leaks
                 resolve(currentConfig.value)
             })
             view.on('any', async (i: ButtonInteraction) => {

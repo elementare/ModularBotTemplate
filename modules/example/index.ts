@@ -67,7 +67,7 @@ module.exports = async (client: Client, logger: Logger): Promise<{
                     schema: {
                         cu: {
                             name: 'cu',
-                            type: 'string',
+                            type: 'embed',
                             description: 'Example setting 3',
 
                         }

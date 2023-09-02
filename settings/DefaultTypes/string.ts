@@ -7,7 +7,6 @@ import {
     ButtonInteraction
 } from "discord.js";
 import {SavedSetting, SettingStructure, typeFile} from "../../types";
-import {EmbedMenu} from "../../utils/EmbedMenu";
 import {InteractionView} from "../../utils/InteractionView";
 
 

@@ -331,7 +331,7 @@ type ListOption = {
     updateFunction?: configFunc
 }
 
-type SettingStructureBaseTypes = "string" | "number" | "boolean"
+type SettingStructureBaseTypes = "string" | "number" | "boolean" | "embed"
 type SettingStructureTypesAdditions = "arr"
 type SettingStructureTypesFullNonComplex =
     `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}`

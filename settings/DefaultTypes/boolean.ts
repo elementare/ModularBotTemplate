@@ -6,7 +6,6 @@ import {
     EmbedBuilder
 } from "discord.js";
 import {MessageViewUpdate, SavedSetting, typeFile} from "../../types";
-import {EmbedMenu} from "../../utils/EmbedMenu";
 import {InteractionView} from "../../utils/InteractionView";
 
 function generateRandomId(length: number = 8): string {

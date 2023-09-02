@@ -31,9 +31,10 @@ export default new SlashCommand({
         const modifier = typeSplit[1];
         const view = new InteractionView(interaction, interaction.channel as GuildTextBasedChannel, client, {
             filter: (i) => i.user.id === interaction.user.id,
+            timeout: 4 * 60 * 1000
         })
-        view.setTimeout(240000).then(() => {
-            view.destroy()
+        view.once('end', (reason) => {
+            if (reason !== 'time') return
             view.update({
                 embeds: [],
                 components: [],
