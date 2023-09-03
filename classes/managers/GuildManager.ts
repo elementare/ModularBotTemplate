@@ -6,6 +6,14 @@ import {Logger} from "winston";
 function parseSettingValue(setting: string, type: string, client: ExtendedClient, guildData: any, guild: discordGuild, structure: SettingStructure, logger: Logger) {
     const typeObj = client.typesCollection.get(type)
     if (setting === 'null') return null
+    if (type.endsWith('-arr')) {
+        const baseType = type.split('-')[0]
+        const arr = JSON.parse(setting)
+        const final = []
+        for (const item of arr) {
+            final.push(parseSettingValue(JSON.stringify(item), baseType, client, guildData, guild, structure, logger))
+        }
+    }
     if (!typeObj) return JSON.parse(setting)
     if (typeObj.name === 'complex') {
         logger.debug(`Parsing complex setting ${structure.name}`)
