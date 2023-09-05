@@ -22,9 +22,7 @@ export default {
             if (!baseType) return reject('Type not found')
             const complexType = types.find((value) => value.name === 'complex-arr') as typeFile
             const current = currentConfig.value as (any[] | undefined) ?? []
-            console.log(complexType)
-            const metadataFn = currentConfig.metadata || complexType.parseSettingToArrayFields
-            console.log(metadataFn)
+            const metadataFn =  currentConfig.metadata?.parseToField || complexType.parseSettingToArrayFields
             const values = parseSettingToArrayFields(current, metadataFn)
             const embed = new EmbedBuilder()
                 .setTitle(`Configurar ${currentConfig.name}`)

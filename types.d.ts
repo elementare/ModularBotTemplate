@@ -401,7 +401,7 @@ type DbSetting = {
 type typeFile = {
     name: string,
     complex: boolean,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any) => any,
+    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any | undefined) => any,
     parse?: (config: string, client: ExtendedClient, guildData: any, guild: DiscordGuild) => any,
     parseSettingToArrayFields?: (value: any) => string,
 }
