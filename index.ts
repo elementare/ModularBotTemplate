@@ -134,7 +134,7 @@ function findJsFiles(dir: string): Array<typeFile> {
 }
 client.setMaxListeners(30)
 client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
-    await logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
+    logger.notice(`Logged in as ${chalk.hex('#00aaff')(client.user.tag)}`);
     const dbLogger = logger.child({service: `Database`, hexColor: '#33f517'});
     dbLogger.notice('Connecting to MongoDB...');
     mongoose.connect(process.env.MONGODB_SRV as string, {
@@ -160,6 +160,7 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
             }
         })
     })
+    client.commandMiddleware = []
     client.typesCollection = new Collection<string, typeFile>((findJsFiles('./settings/DefaultTypes')).map(type => [type.name, type]))
     client.profileHandler = new UserHandler(client, logger.child({service: 'User Handler', hexColor: '#bbaaff'}));
     client.guildHandler = new GuildHandler(client, logger.child({service: 'Guild Handler', hexColor: '#bbaaff'}));
@@ -167,6 +168,9 @@ client.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
     client.cachedEvents = new Collection();
     client.settingsHandler = new SettingsManager(client, logger.child({service: 'Settings Manager', hexColor: '#bbaaff'}));
     client.logger = logger;
+    client.addMiddleware = (func: Function) => {
+        client.commandMiddleware.push(func)
+    }
     logger.info('Profile handler and Guild Handler loaded');
     const {userData, guildData} = await loadModules(logger, client);
     logger.notice('All modules loaded!');

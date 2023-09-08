@@ -92,9 +92,18 @@ interface SlashCommandAutoCompleteArgs {
     guild: Guild,
     interfacer: BaseModuleInterfacer
 }
+type MiddlewareArgs = {
+    client: ExtendedClient,
+    logger: Logger,
+    profile: User,
+    guild: Guild,
+    interfacer: BaseModuleInterfacer,
+    command: Command | SlashCommand,
+}
 
 interface ExtendedClient extends Client {
     logger: Logger;
+
     commands: CommandsMap;
 
     typesCollection: Collection<string, typeFile>;
@@ -104,6 +113,8 @@ interface ExtendedClient extends Client {
     guildHandler: GuildManager;
 
     slashHandler: SlashManager;
+
+    commandMiddleware: ((args: MiddlewareArgs) => Promise<boolean>)[];
 
     modules: Collection<string, Module>;
     defaultModels: {
@@ -142,6 +153,7 @@ interface ExtendedClient extends Client {
 
     removeAllListeners<S extends string | symbol>(event?: Exclude<S, keyof ExtendedClientEvents>): this;
 
+    addMiddleware(func: (args: MiddlewareArgs) => Promise<boolean>): void;
 }
 
 interface mongoseSchemaData {

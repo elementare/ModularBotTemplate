@@ -1,8 +1,7 @@
 import {ExtendedClient, MessageViewUpdate} from "../types";
 import {
     ActionRowBuilder,
-    AnyComponentBuilder,
-    ButtonBuilder, CacheType,
+    CacheType,
     Message,
     RepliableInteraction,
     TextBasedChannel
@@ -52,11 +51,14 @@ export class InteractionView extends EventEmitter {
     private timeout: NodeJS.Timeout | null = null
     private readonly interactionListener: (interaction: RepliableInteraction<CacheType>) => Awaitable<void>
     private readonly messageDeleteListener: (message: Message) => Awaitable<void>
-    constructor(interaction: RepliableInteraction, channel: TextBasedChannel, client: ExtendedClient, extendedOptions?: ExtraOptions) {
+    private readonly parent: InteractionView | null = null
+    constructor(interaction: RepliableInteraction, channel: TextBasedChannel, client: ExtendedClient, extendedOptions?: ExtraOptions, parent: InteractionView | null = null) {
         super()
         this.channel = channel
         this.client = client
         this.interaction = interaction
+        this.parent = parent
+        if ((interaction as any)?.message) this.msgId = (interaction as any).message.id
         if (extendedOptions?.ephemeral) this.options = extendedOptions
         if (extendedOptions?.filter) this.extraFilter = extendedOptions.filter
         if (extendedOptions?.timeout !== 0) this.setTimeout(extendedOptions?.timeout || 60000)
@@ -67,7 +69,6 @@ export class InteractionView extends EventEmitter {
                 console.log(`interaction, id:${id}, currentViewId:${this.viewId},event:${(interaction as any).customId}`)
                 if (this.extraFilter((interaction as RepliableInteraction))) {
                     if (this.timeout) this.timeout.refresh()
-
                     const viewId = split.pop()
                     if (viewId !== this.viewId) return // This ensures that clones views don't emit events in the original view
                     super.emit(id, interaction, split)
@@ -99,7 +100,7 @@ export class InteractionView extends EventEmitter {
         this.timeout = setTimeout(() => { this.destroy('time')}, ms)
         return this.timeout
     }
-    public setMsgId(id: string) {
+    protected setMsgId(id: string) {
         this.msgId = id
         return true
     }
@@ -108,7 +109,7 @@ export class InteractionView extends EventEmitter {
         return true
     }
     public async update(view: MessageViewUpdate): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             if (view.components) view.components = addRandomIdToButtons(view.components as ActionRowBuilder[], this.viewId)
             if (this.interaction.replied) {
                 await this.interaction.editReply(view).then(() => {
@@ -124,6 +125,7 @@ export class InteractionView extends EventEmitter {
                     ephemeral: this.options.ephemeral
                 }).then((msg) => {
                     this.msgId = msg.id
+                    if (this.parent) this.parent.setMsgId(msg.id)
                     return resolve(true)
                 }).catch(() => {
                     return resolve(false)
@@ -132,11 +134,10 @@ export class InteractionView extends EventEmitter {
         })
     }
     public clone() {
-        const cloned = new InteractionView(this.interaction, this.channel, this.client, {ephemeral: this.options.ephemeral, filter: this.extraFilter})
+        const cloned = new InteractionView(this.interaction, this.channel, this.client, {ephemeral: this.options.ephemeral, filter: this.extraFilter}, this)
         cloned.setMsgId(this.msgId)
         return cloned
     }
-
     public destroy(reason?: string) {
         if (this.timeout) clearTimeout(this.timeout)
         super.emit("end", reason || "destroy")

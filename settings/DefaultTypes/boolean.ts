@@ -5,19 +5,13 @@ import {
     ButtonStyle,
     EmbedBuilder
 } from "discord.js";
-import {MessageViewUpdate, SavedSetting, typeFile} from "../../types";
+import { SavedSetting, typeFile} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
-
-function generateRandomId(length: number = 8): string {
-    if (length <= 0) return '';
-    return Math.floor(Math.random() * 10).toString() + generateRandomId(length - 1);
-}
-
 export default {
     name: 'boolean',
     complex: false,
     run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting) => {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             const value = !!(currentConfig?.value)
             const embed = new EmbedBuilder()
                 .setTitle(`Configurar ${currentConfig.name}`)
