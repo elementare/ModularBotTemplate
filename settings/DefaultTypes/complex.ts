@@ -1,6 +1,16 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, resolveColor} from "discord.js";
-import {ComplexSetting, CustomSetting, SavedSetting, SchemaComplexSetting, SchemaSetting, typeFile} from "../../types";
+import {
+    ComplexSetting,
+    CustomSetting,
+    ExtendedClient,
+    SavedSetting,
+    SchemaComplexSetting,
+    SchemaSetting,
+    typeFile
+} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
+import {Setting} from "../../classes/structs/Setting";
+import Guild from "../../classes/structs/Guild";
 
 function mapSchema(schema: ComplexSetting["schema"]): Map<string, SchemaSetting> {
     const mappedSchema: any = new Map()
@@ -24,19 +34,29 @@ function chunkArr<T>(arr: T[], size: number): T[][] {
     }
     return chunkedArr;
 }
+
 function checkFilledSchema(currentConfig: SavedSetting): boolean {
     const structure = currentConfig.struc as ComplexSetting
     const mappedSchema = mapSchema(structure.schema)
     for (const [key, value] of mappedSchema) {
-        if ( !currentConfig.value?.[key]) return false // Copilot is a genius, value.required &&
+        if (!currentConfig.value?.[key]) return false // Copilot is a genius, value.required &&
     }
     return true
 }
 
-export default {
-    name: 'complex',
-    complex: true,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting) => {
+export default class ComplexSettingClass extends Setting {
+    public settingType: string = "complex"
+    constructor(name: string, value: any | null, permission: bigint, description: string,guild: Guild) {
+        super({
+            name,
+            value,
+            permission,
+            description,
+            guild
+        });
+    }
+
+    public run(view: InteractionView, types: typeFile[], currentConfig: SavedSetting) {
         return new Promise(async (resolve, reject) => {
             const structure = currentConfig.struc as ComplexSetting
             if (structure.embed.color) structure.embed.color = resolveColor(structure.embed.color)
@@ -66,7 +86,7 @@ export default {
             view.on('confirm', async (i: ButtonInteraction) => {
                 if (!checkFilledSchema(currentConfig)) {
                     const newEmbed = new EmbedBuilder(embed.toJSON())
-                        .setFooter({ text: 'Você não preencheu todos os campos! 💔' })
+                        .setFooter({text: 'Você não preencheu todos os campos! 💔'})
                         .setColor('#ff6767')
                     // await i.deferUpdate()
                     return view.update({
@@ -74,7 +94,7 @@ export default {
                         components: rows
                     })
                 }
-                // await i.deferUpdate()
+// await i.deferUpdate()
                 const embedSuccess = new EmbedBuilder()
                     .setTitle(`Configuração de ${currentConfig.name} concluída`)
                     .setColor('#ffffff')

@@ -421,3 +421,21 @@ type typeFile = {
 type MessageViewUpdate = BaseMessageOptions
 
 type AnyView = MessageView | InteractionView
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
