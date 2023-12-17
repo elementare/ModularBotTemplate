@@ -25,6 +25,7 @@ import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
 import {InteractionView} from "./utils/InteractionView";
 import {MessageView} from "./utils/MessageView";
+import {Setting} from "./settings/Setting";
 
 type configFunc = (args: {
     client: ExtendedClient,
@@ -195,7 +196,7 @@ interface Module {
     data: Manifest,
     commands?: CommandsMap,
     interfacer: BaseModuleInterfacer,
-    settings: ConfigOption[]
+    settings: Setting<any>[]
 }
 
 export interface ExtendedClientEvents extends ClientEvents {
@@ -421,21 +422,3 @@ type typeFile = {
 type MessageViewUpdate = BaseMessageOptions
 
 type AnyView = MessageView | InteractionView
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

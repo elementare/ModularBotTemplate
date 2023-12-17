@@ -22,7 +22,7 @@ function genRandomHexId(): string {
 function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
     return rows.map((row) => {
         row.setComponents(row.components.map((component) => {
-            const customId = (component.toJSON() as any).custom_id
+            const customId = (component.toJSON() as any).custom_id as string
             const split = customId.split("-")
             const viewId = split.pop()
             if (viewId === id) return component

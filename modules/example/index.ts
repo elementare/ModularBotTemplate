@@ -1,11 +1,15 @@
-import {Client, PermissionsBitField} from "discord.js";
+import {Client, EmbedBuilder, PermissionsBitField} from "discord.js";
 import {Logger} from "winston";
 import {BaseModuleInterfacer, ConfigOption, SettingStructure} from "../../types";
+import {Setting} from "../../settings/Setting";
+import {StringSettingFile} from "../../settings/DefaultTypes/string";
+import ComplexSettingClass from "../../settings/DefaultTypes/complex";
+import {NumberSettingFile} from "../../settings/DefaultTypes/number";
 
 
 module.exports = async (client: Client, logger: Logger): Promise<{
     interfacer: BaseModuleInterfacer,
-    settings: Array<ConfigOption>
+    settings: Array<Setting<any>>
 }> => {
     logger.notice(`Initializing module`);
     const interfacer = new class Interfacer implements BaseModuleInterfacer {
@@ -14,39 +18,30 @@ module.exports = async (client: Client, logger: Logger): Promise<{
         }
 
     }(logger);
-    const settings: Array<SettingStructure> = [
-        {
-            name: 'aaaaaaaaaaaaaaaaaaa',
-            description: 'Example setting 3',
-            type: "complex-arr",
-            embed: {
-                title: 'Example embed',
-                description: 'Example embed description',
-                color: '#ff0000',
-            },
+    const settings: Array<Setting<any>> = [
+        new StringSettingFile({
+            name: 'Teste',
+            description: 'Teste',
+            permission: PermissionsBitField.Flags.Administrator
+        }),
+        new ComplexSettingClass({
+            name: 'Teste 2',
+            description: 'Teste',
             permission: PermissionsBitField.Flags.Administrator,
             schema: {
-                cu: {
-                    name: 'cu',
-                    type: 'role',
-                    description: 'Example setting 3',
-                    metadata: {
-                        placeholder: "Cu"
-                    }
-                },
-                cu2: {
-                    name: 'cu2',
-                    type: 'channel',
-                    description: 'Example setting 3',
-
-                }
+                teste: new StringSettingFile({
+                    name: 'Teste',
+                    description: 'Teste'
+                }),
+                teste2: new NumberSettingFile({
+                    name: 'Teste 2',
+                    description: 'Teste'
+                })
             },
-            metadata: {
-                parseToField: () => {
-                    return "a"
-                }
-            }
-        },
+            embed: new EmbedBuilder()
+                .setTitle('Teste')
+                .setDescription('Teste')
+        })
     ]
     return {
         interfacer: interfacer,

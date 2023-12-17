@@ -3,6 +3,7 @@ import {ComplexSetting, CustomSetting, DbSetting, ExtendedClient, SavedSetting, 
 import { Collection } from "discord.js";
 import { Guild as discordGuild } from "discord.js";
 import {Logger} from "winston";
+import {Setting} from "../../settings/Setting";
 async function parseSettingValue(setting: string, type: string, client: ExtendedClient, guildData: any, guild: discordGuild, structure: SettingStructure, logger: Logger): Promise<unknown> {
     const typeObj = client.typesCollection.get(type)
     if (setting === 'null') return null
@@ -49,39 +50,33 @@ function getType(setting: SettingStructure) {
 }
 async function getAllSettings (client: ExtendedClient, guildData: any, guild: discordGuild, logger: Logger) {
     const settings = client.modules.map((module) => module.settings).flat()
-    const settingsMap = new Collection<string, SavedSetting>()
+    const settingsMap = new Collection<string, Setting<any>>()
     for (const setting of settings) {
         const settingData = guildData.settings.get(setting.name) as DbSetting
-        const type = getType(setting)
-        if (!settingData) {
-            const defaultValue: SavedSetting = {
-                name: setting.name,
-                value: await parseSettingValue(setting.default || 'null', type, client, guildData, guild, setting, logger),
-                permission: setting.permission,
-                type: type,
-                struc: setting,
-                metadata: (setting as any).metadata,
-            }
-            settingsMap.set(setting.name, defaultValue)
-        } else {
-            const parsed: SavedSetting = {
-                name: setting.name,
-                value: await parseSettingValue(settingData.value, type, client, guildData, guild, setting, logger),
-                permission: setting.permission,
-                type: type,
-                struc: setting,
-                metadata: (setting as any).metadata,
-            }
-            settingsMap.set(setting.name, parsed)
+        // Loading bypasses default loading and parsing steps,
+        // Should only be used with settings that have a customized save flow that saves to elsewhere than the normal settings table
+        if (setting.load) {
+            const result = await setting.load(guild, guildData)
+            setting.value = result
+            settingsMap.set(setting.name, setting)
+            continue
         }
+        if (settingData) {
+            if (setting.parse) {
+                const parsed = await setting.parse(settingData.value, client, guildData, guild)
+                setting.value = parsed
+            } else {
+                setting.value = JSON.parse(settingData.value)
+            }
+        }
+        settingsMap.set(setting.name, setting)
     }
-
     return settingsMap
 }
 
 export default class GuildManager {
     private readonly client: ExtendedClient;
-    private settingCache: Collection<string, Collection<string, SavedSetting>> = new Collection<string, Collection<string, SavedSetting>>()
+    private settingCache: Collection<string, Collection<string, Setting<any>>> = new Collection<string, Collection<string, Setting<any>>>()
     private readonly logger: Logger;
     constructor(client: ExtendedClient, logger: Logger) {
         this.client = client

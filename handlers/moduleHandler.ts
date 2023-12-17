@@ -16,6 +16,7 @@ import commandHandler from "./commandHandler";
 import SlashCommand from "../classes/structs/SlashCommand";
 import Command from "../classes/structs/Command";
 import {Schema} from "mongoose";
+import {Setting} from "../settings/Setting";
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -108,7 +109,7 @@ export async function loadModules(logger: winston.Logger, client: ExtendedClient
                 if (files.includes(`${fileName}.ts`)) manifest.initFile = `${fileName}.ts`;
                 const init: (client: ExtendedClient, moduleLogger: Logger) => Promise<{
                     interfacer?: BaseModuleInterfacer,
-                    settings?: ConfigOption[]
+                    settings?: Setting<any>[]
                 }> = require(`../modules/${folder}/${manifest.initFile}`);
                 const moduleLogger = logger.child({service: manifest.name, hexColor: manifest.color});
                 await init(client, moduleLogger).then(async ({ interfacer, settings}) => {
