@@ -1,18 +1,17 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, resolveColor} from "discord.js";
-import {ComplexSetting, CustomSetting, SavedSetting, SchemaComplexSetting, SchemaSetting, typeFile} from "../../types";
+import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Collection, EmbedBuilder} from "discord.js";
+import {
+    typeFile
+} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
+import {Setting} from "../Setting";
 
-function mapSchema(schema: ComplexSetting["schema"]): Map<string, SchemaSetting> {
-    const mappedSchema: any = new Map()
+function mapSchema(schema: ComplexSettingStructure["schema"]): Collection<string, Setting<any>> {
+    const mappedSchema = new Collection<string, Setting<any>>()
     for (const key in schema) {
         const element = schema[key]
         mappedSchema.set(key, element)
     }
     return mappedSchema
-}
-
-function checkComplex(setting: ComplexSetting | CustomSetting): setting is ComplexSetting {
-    return setting.type === "complex" || setting.type === "complex-arr"
 }
 
 function chunkArr<T>(arr: T[], size: number): T[][] {
@@ -24,27 +23,56 @@ function chunkArr<T>(arr: T[], size: number): T[][] {
     }
     return chunkedArr;
 }
-function checkFilledSchema(currentConfig: SavedSetting): boolean {
-    const structure = currentConfig.struc as ComplexSetting
-    const mappedSchema = mapSchema(structure.schema)
-    for (const [key, value] of mappedSchema) {
-        if ( !currentConfig.value?.[key]) return false // Copilot is a genius, value.required &&
+
+function checkFilledSchema(currentConfig: ComplexSettingClass): boolean {
+    for (const [key, value] of currentConfig.schema) {
+        if (!(currentConfig.value as any)?.[key]) return false
     }
     return true
 }
 
-export default {
-    name: 'complex',
-    complex: true,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting) => {
+type ComplexSettingStructure = {
+    name: string
+    description: string
+    permission: bigint
+
+    schema: {
+        [key: string]: Setting<any>
+    }
+    embed: EmbedBuilder
+}
+
+type ComplexSettingReturn = {
+    [key: string]: any
+}
+
+export default class ComplexSettingClass implements Setting<ComplexSettingReturn> {
+    public type = "complex"
+    public name: string
+    public description: string
+    public permission: bigint
+    public structure: ComplexSettingStructure
+    public value?: ComplexSettingReturn
+    public embed: EmbedBuilder
+    public schema: Collection<string, ComplexSettingStructure["schema"][string]>
+
+    constructor(setting: ComplexSettingStructure, value?: ComplexSettingReturn) {
+        this.name = setting.name
+        this.description = setting.description
+        this.permission = setting.permission
+        this.structure = setting
+        this.embed = setting.embed
+
+        this.schema = mapSchema(setting.schema)
+
+        this.value = value
+    }
+
+    public run(view: InteractionView): Promise<ComplexSettingReturn> {
         return new Promise(async (resolve, reject) => {
-            const structure = currentConfig.struc as ComplexSetting
-            if (structure.embed.color) structure.embed.color = resolveColor(structure.embed.color)
-            const embed = new EmbedBuilder(structure.embed)
-            const mappedSchema = mapSchema(structure.schema)
-            const buttons = Array.from(mappedSchema.values()).map((value) => {
+            const buttons = this.schema.map((value, key) => {
                 return new ButtonBuilder()
-                    .setCustomId(value.name)
+                    .setCustomId(key)
                     .setLabel(value.name)
                     .setStyle(ButtonStyle.Primary)
             })
@@ -60,23 +88,21 @@ export default {
                     .setStyle(ButtonStyle.Success)
             ]))
             await view.update({
-                embeds: [embed],
+                embeds: [this.embed],
                 components: rows
             })
             view.on('confirm', async (i: ButtonInteraction) => {
-                if (!checkFilledSchema(currentConfig)) {
-                    const newEmbed = new EmbedBuilder(embed.toJSON())
-                        .setFooter({ text: 'Você não preencheu todos os campos! 💔' })
+                if (!checkFilledSchema(this)) {
+                    const newEmbed = new EmbedBuilder(this.embed.toJSON())
+                        .setFooter({text: 'Você não preencheu todos os campos! 💔'})
                         .setColor('#ff6767')
-                    // await i.deferUpdate()
                     return view.update({
                         embeds: [newEmbed],
                         components: rows
                     })
                 }
-                // await i.deferUpdate()
                 const embedSuccess = new EmbedBuilder()
-                    .setTitle(`Configuração de ${currentConfig.name} concluída`)
+                    .setTitle(`Configuração de ${this.name} concluída`)
                     .setColor('#ffffff')
                     .setDescription('A configuração foi alterada com sucesso!')
 
@@ -85,44 +111,30 @@ export default {
                     components: []
                 })
                 view.destroy()
-                resolve(currentConfig.value)
+                resolve(this.value ?? {})
             })
             view.on('any', async (i: ButtonInteraction) => {
                 if (i.customId === 'confirm') return
+
                 await i.deferUpdate()
-                const setting = mappedSchema.get(i.customId.split('-')[0])
+                const key = i.customId.split('-')[0]
+                console.log(key)
+                const setting = this.schema.get(key)
+                console.log(setting)
                 if (!setting) return
-                const type = types.find((value) => value.name === setting.type)
-                if (!type) return
-                let current = currentConfig.value
-                const currentSetting: SavedSetting = {
-                    name: setting.name,
-                    value: current?.[setting.name] ?? undefined,
-                    struc: {
-                        name: setting.name,
-                        description: setting.description,
-                        permission: BigInt(8),
-                        type: setting.type as any
-                    },
-                    permission: BigInt(8),
-                    type: setting.type as any
-                }
-                if (checkComplex(currentSetting.struc)) {
-                    const settingg = setting as SchemaComplexSetting
-                    currentSetting.struc.schema = settingg.schema
-                    currentSetting.struc.embed = settingg.embed
-                }
-                await type.run(view.clone(), types, currentSetting, (setting as any).metadata).then(async (value: any) => {
-                    const values = currentConfig.value ?? {}
-                    values[setting.name] = value
-                    currentConfig.value = values
+                let current = this.value ?? {}
+                setting.value = current[key]
+                await setting.run(view.clone()).then(async (value: any) => {
+
+                    current[key] = value
+                    this.value = current
+
                     await view.update({
-                        embeds: [embed],
+                        embeds: [this.embed],
                         components: rows
                     })
                 }).catch(() => {
                 })
-
             })
         })
     }

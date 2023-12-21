@@ -42,6 +42,10 @@ export default class GuildManager {
         )
     }
      */
+
+    /*
+     * Save to database, does not update object
+     */
     setSetting(guild: Guild, setting: string, value: EncodedJSON): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             const settingData = guild.settings.get(setting)
@@ -52,15 +56,8 @@ export default class GuildManager {
             }
             guild.data.settings.set(setting, newData)
             await guild.data.save()
-            const newParsedData: SavedSetting = {
-                name: settingData.name,
-                value: JSON.parse(value),
-                permission: settingData.permission,
-                type: settingData.type,
-                struc: settingData.struc
-            }
-            guild.settings.set(setting, newParsedData)
             return resolve(true)
         })
     }
+
 }

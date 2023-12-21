@@ -12,6 +12,17 @@ export const event: Event<"interactionCreate"> = {
             const module = client.modules.get(command.module)
             if (!module) return;
             try {
+                for (const middlewareFn of client.commandMiddleware) {
+                    const result = await middlewareFn({
+                        client,
+                        logger: command.logger,
+                        profile: await client.profileHandler.fetchOrCreate(interaction.user.id, interaction.guildId),
+                        guild: await client.guildHandler.fetchOrCreate(interaction.guildId),
+                        interfacer: module.interfacer,
+                        command
+                    })
+                    if (!result) return;
+                }
                 await command.func({
                     client,
                     logger: command.logger,

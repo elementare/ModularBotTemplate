@@ -25,6 +25,7 @@ import SlashManager from "./classes/managers/SlashManager";
 import SettingsManager from "./classes/managers/SettingsManager";
 import {InteractionView} from "./utils/InteractionView";
 import {MessageView} from "./utils/MessageView";
+import {Setting} from "./settings/Setting";
 
 type configFunc = (args: {
     client: ExtendedClient,
@@ -92,9 +93,18 @@ interface SlashCommandAutoCompleteArgs {
     guild: Guild,
     interfacer: BaseModuleInterfacer
 }
+type MiddlewareArgs = {
+    client: ExtendedClient,
+    logger: Logger,
+    profile: User,
+    guild: Guild,
+    interfacer: BaseModuleInterfacer,
+    command: Command | SlashCommand,
+}
 
 interface ExtendedClient extends Client {
     logger: Logger;
+
     commands: CommandsMap;
 
     typesCollection: Collection<string, typeFile>;
@@ -104,6 +114,8 @@ interface ExtendedClient extends Client {
     guildHandler: GuildManager;
 
     slashHandler: SlashManager;
+
+    commandMiddleware: ((args: MiddlewareArgs) => Promise<boolean>)[];
 
     modules: Collection<string, Module>;
     defaultModels: {
@@ -142,6 +154,7 @@ interface ExtendedClient extends Client {
 
     removeAllListeners<S extends string | symbol>(event?: Exclude<S, keyof ExtendedClientEvents>): this;
 
+    addMiddleware(func: (args: MiddlewareArgs) => Promise<boolean>): void;
 }
 
 interface mongoseSchemaData {
@@ -183,7 +196,7 @@ interface Module {
     data: Manifest,
     commands?: CommandsMap,
     interfacer: BaseModuleInterfacer,
-    settings: ConfigOption[]
+    settings: Setting<any>[]
 }
 
 export interface ExtendedClientEvents extends ClientEvents {
@@ -401,7 +414,7 @@ type DbSetting = {
 type typeFile = {
     name: string,
     complex: boolean,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any) => any,
+    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any | undefined) => any,
     parse?: (config: string, client: ExtendedClient, guildData: any, guild: DiscordGuild) => any,
     parseSettingToArrayFields?: (value: any) => string,
 }

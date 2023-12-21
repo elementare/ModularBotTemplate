@@ -1,11 +1,16 @@
-import {Client, PermissionsBitField} from "discord.js";
+import {Client, EmbedBuilder, PermissionsBitField} from "discord.js";
 import {Logger} from "winston";
-import {BaseModuleInterfacer, ConfigOption, SettingStructure} from "../../types";
+import {BaseModuleInterfacer} from "../../types";
+import {Setting} from "../../settings/Setting";
+import {StringSettingFile} from "../../settings/DefaultTypes/string";
+import ComplexSettingClass from "../../settings/DefaultTypes/complex";
+import {NumberSettingFile} from "../../settings/DefaultTypes/number";
+import {ArrSettingFile} from "../../settings/DefaultTypes/arr";
 
 
 module.exports = async (client: Client, logger: Logger): Promise<{
     interfacer: BaseModuleInterfacer,
-    settings: Array<ConfigOption>
+    settings: Array<Setting<any>>
 }> => {
     logger.notice(`Initializing module`);
     const interfacer = new class Interfacer implements BaseModuleInterfacer {
@@ -14,157 +19,62 @@ module.exports = async (client: Client, logger: Logger): Promise<{
         }
 
     }(logger);
-    const settings: Array<SettingStructure> = [
-        {
-            name: 'cu',
-            description: 'Example setting',
-            type: 'string',
-            permission: PermissionsBitField.Flags.Administrator,
-        },
-        {
-            name: 'cu5',
-            description: 'Example setting',
-            type: 'string-arr',
-            permission: PermissionsBitField.Flags.Administrator,
-        },
-        {
-            name: 'cu2',
-            description: 'Example setting 2',
-            type: 'boolean',
-            permission: PermissionsBitField.Flags.Administrator,
-        },
-        {
-            name: 'cu3',
-            description: 'Example setting 3',
-            type: "complex",
-            embed: {
-                title: 'Example embed',
-                description: 'Example embed description',
-                color: '#ff0000',
-            },
+    const settings: Array<Setting<any>> = [
+        new StringSettingFile({
+            name: 'Teste',
+            description: 'Teste',
+            permission: PermissionsBitField.Flags.Administrator
+        }),
+        new ComplexSettingClass({
+            name: 'Teste 2',
+            description: 'Teste',
             permission: PermissionsBitField.Flags.Administrator,
             schema: {
-                cu: {
-                    name: 'cu',
-                    type: 'string',
-                    description: 'Example setting 3',
-                },
-                cu2: {
-                    name: 'cu2',
-                    type: 'number',
-                    description: 'Example setting 3',
-
-                },
-                cu3: {
-                    name: 'cu3',
-                    description: 'Example setting 3',
-                    type: 'complex',
-                    embed: {
-                        title: 'Example embed',
-                        description: 'Example embed description',
-                        color: '#ff0000',
-                    },
-                    schema: {
-                        cu: {
-                            name: 'cu',
-                            type: 'embed',
-                            description: 'Example setting 3',
-
-                        }
-                    }
-                }
-            }
-        },
-        {
-            name: 'complexarr-simple',
-            description: 'Example setting 3',
-            type: "complex-arr",
-            embed: {
-                title: 'Example embed',
-                description: 'Example embed description',
-                color: '#ff0000',
+                teste: new StringSettingFile({
+                    name: 'Teste',
+                    description: 'Teste'
+                }),
+                teste2: new NumberSettingFile({
+                    name: 'Teste 2',
+                    description: 'Teste'
+                })
             },
+            embed: new EmbedBuilder()
+                .setTitle('Teste')
+                .setDescription('Teste')
+        }),
+        new ArrSettingFile({
+            name: 'Teste 3 Array simples',
+            description: 'Teste',
             permission: PermissionsBitField.Flags.Administrator,
-            schema: {
-                cu: {
-                    name: 'cu',
-                    type: 'string',
-                    description: 'Example setting 3',
-
-                },
-                cu2: {
-                    name: 'cu2',
-                    type: 'number',
-                    description: 'Example setting 3',
-
-                },
-                cu3: {
-                    name: 'cu3',
-                    description: 'Example setting 3',
-                    type: 'boolean'
-                }
-            }
-        },
-        {
-            name: 'complexarr-complex',
-            description: 'Example setting 3',
-            type: "complex-arr",
-            embed: {
-                title: 'Example embed',
-                description: 'Example embed description',
-                color: '#ff0000',
-            },
+            child: new StringSettingFile({
+                name: 'Teste',
+                description: 'Teste'
+            })
+        }),
+        new ArrSettingFile({
+            name: 'Teste 4 Array complexo',
+            description: 'Teste',
             permission: PermissionsBitField.Flags.Administrator,
-            schema: {
-                cu: {
-                    name: 'cu',
-                    type: 'string',
-                    description: 'Example setting 3',
-
+            child: new ComplexSettingClass({
+                name: 'Teste 4',
+                description: 'Teste',
+                permission: PermissionsBitField.Flags.Administrator,
+                schema: {
+                    teste: new StringSettingFile({
+                        name: 'Teste',
+                        description: 'Teste'
+                    }),
+                    teste2: new NumberSettingFile({
+                        name: 'Teste 2',
+                        description: 'Teste'
+                    })
                 },
-                cu2: {
-                    name: 'cu2',
-                    type: 'number',
-                    description: 'Example setting 3',
-
-                },
-                cu3: {
-                    name: 'cu3',
-                    description: 'Example setting 3',
-                    type: 'complex',
-                    embed: {
-                        title: 'Example embed',
-                        description: 'Example embed description',
-                        color: '#ff0000',
-                    },
-                    schema: {
-                        cu: {
-                            name: 'cu',
-                            type: 'string',
-                            description: 'Example setting 3',
-
-                        }
-                    }
-                },
-                cu4: {
-                    name: 'cu4',
-                    description: 'Example setting 3',
-                    type: 'complex-arr',
-                    embed: {
-                        title: 'Example embed',
-                        description: 'Example embed description',
-                        color: '#ff0000',
-                    },
-                    schema: {
-                        cu: {
-                            name: 'cu',
-                            type: 'string',
-                            description: 'Example setting 3'
-                        }
-                    }
-                }
-            }
-        }
+                embed: new EmbedBuilder()
+                    .setTitle('Teste')
+                    .setDescription('Teste')
+            })
+        })
     ]
     return {
         interfacer: interfacer,

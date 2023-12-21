@@ -17,4 +17,5 @@ export default class Command {
         this.howToUse = params.howToUse;
         this.func = params.func;
     }
+    [key: string]: unknown;
 }

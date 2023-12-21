@@ -1,12 +1,13 @@
 import User from '../structs/User'
 import {ExtendedClient} from "../../types";
 import Guild from "../structs/Guild";
-import {Collection, FetchMembersOptions, GuildMember} from "discord.js";
+import {Collection, GuildMember} from "discord.js";
 import {Logger } from "winston";
 
 async function getGuilds(client: ExtendedClient, guilds: Array<string>): Promise<Array<Guild>> {
-    const guildArray = []
+    const guildArray: Guild[] = []
     for (const guild of guilds) {
+        if (guildArray.find((guildObj) => guildObj.guild.id === guild)) continue
         guildArray.push(await client.guildHandler.fetchOrCreate(guild))
     }
     return guildArray
@@ -105,14 +106,14 @@ export default class userHandler {
             if (!userProfiles || userProfiles.length === 0) return err('No user profiles!')
             const guilds = userProfiles.map((profile: any) => profile.guildId)
             const guildArray = await getGuilds(this.client, guilds)
-            const userIdsByGuild = new Map<string, string>()
+            const userIdsByGuild = new Map<string, string[]>()
             userProfiles.forEach((profile: any) => {
-                userIdsByGuild.set(profile.guildId, profile.id)
+                userIdsByGuild.set(profile.guildId, [...(userIdsByGuild.get(profile.guildId) || []), profile.id])
             })
             const usersByGuild = new Map<string, Collection<string, GuildMember> | GuildMember>()
             for (const guild of guildArray) {
                 const ids = userIdsByGuild.get(guild.guild.id)
-                const members = await guild.guild.members.fetch(ids as FetchMembersOptions).catch(() => {})
+                const members = await guild.guild.members.fetch({ user: ids }).catch(() => {})
                 if (!members) continue
                 usersByGuild.set(guild.guild.id, members)
             }
