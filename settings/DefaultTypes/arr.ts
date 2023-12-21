@@ -8,9 +8,8 @@ import {
 import {SavedSetting, typeFile} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
 import {Setting} from "../Setting";
-import {ChannelSettingFile} from "./channel";
 
-function parseSettingToArrayFields(current: Setting<any>[], parseFunction?: (value: Setting<any>) => string) {
+function parseSettingToArrayFields(current: Return[], parseFunction?: (value: Return) => string) {
     const inlined = (current?.length || 0) > 5
     return current.map((value, index) => {
         if (parseFunction) return {
@@ -19,8 +18,9 @@ function parseSettingToArrayFields(current: Setting<any>[], parseFunction?: (val
             inline: inlined
         }
         if (typeof value === 'object') {
-            const keys = Object.keys(value)
-            const values = Object.values(value)
+
+            const keys = Object.keys(value as object)
+            const values = Object.values(value as object)
             return {
                 name: index + 1 + '',
                 value: values.map((value, index) => {
@@ -31,7 +31,7 @@ function parseSettingToArrayFields(current: Setting<any>[], parseFunction?: (val
         }
         return {
             name: index + 1 + '',
-            value: value,
+            value: value + '',
             inline: inlined
         }
     })
@@ -40,28 +40,30 @@ function parseSettingToArrayFields(current: Setting<any>[], parseFunction?: (val
 type ArraySettingStructure = {
     name: string;
     description: string;
-    type: string;
     permission?: bigint;
 
     child: Setting<any>;
     overrides?: {
-        parseToField?: (value: Setting<any>) => string;
+        parseToField?: (value: Return) => string;
     }
 }
 
-export class ArrSettingFile implements Setting<Setting<any>[]> {
+type Return = Setting<unknown>["value"]
+
+
+export class ArrSettingFile implements Setting<Setting<unknown>["value"][]> {
     public type = 'arr';
     public complex = true;
     public name: string;
     public description: string;
     public permission?: bigint;
     public structure: any;
-    public value?: Setting<any>[];
+    public value?: Return[];
     public child: Setting<any>;
     public overrides?: {
-        parseToField?: (value: Setting<any>) => string;
+        parseToField?: (value: Return) => string;
     }
-    constructor(setting: ArraySettingStructure, value?: Setting<any>[]) {
+    constructor(setting: ArraySettingStructure, value?: unknown[]) {
         this.name = setting.name;
         this.description = setting.description;
         this.permission = setting.permission;
@@ -73,8 +75,8 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
         this.value = value;
     }
 
-    public run(view: InteractionView): Promise<Setting<any>[]> {
-        return new Promise(async (resolve, reject) => {
+    public run(view: InteractionView): Promise<Return[]> {
+        return new Promise(async (resolve) => {
             const current = this.value ?? []
 
             const values = parseSettingToArrayFields(current, this.overrides?.parseToField ?? this.child.parseToField)
@@ -87,10 +89,10 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
                     new StringSelectMenuBuilder()
                         .setCustomId('select')
                         .setPlaceholder('Selecione uma opção')
-                        .addOptions(values.map((value) => {
+                        .addOptions(current.map((value, index) => {
                             return {
-                                label: value.name,
-                                value: value.value
+                                label: index + 1 + '',
+                                value: value + ''
                             }
                         }))
                 ])
@@ -117,7 +119,7 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
                 components: rowArr
             })
             view.on('select', async (i) => {
-                const index = current.findIndex((value) => value === i.values[0])
+                const index = current.findIndex((setting) => setting === i.values[0])
                 const value = current[index]
                 if (!value) return
                 await i.deferUpdate()
@@ -135,7 +137,7 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
                     components: rowArr
                 })
             })
-            view.on('confirm', async (i) => {
+            view.on('confirm', async (_) => {
                 await view.update({
                     content: 'Alterações confirmadas!',
                     embeds: [],
@@ -145,13 +147,28 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
                 view = undefined as any // Destroying view to prevent memory leaks
                 resolve(current)
             })
-            view.on('add', async (i) => {
+            view.on('add', async (_) => {
                 const clonedView = view.clone()
+                await i.deferUpdate()
+                const oldName = this.child.name
                 this.child.name = 'Novo valor'
-                const result = await this.child.run(clonedView).catch(() => {})
+                const result = await this.child.run(clonedView).catch(() => { })
+                this.child.name = oldName
                 clonedView.destroy()
                 if (!result) return
                 current.push(result)
+                const a = current.map((value, index) => {
+                    return {
+                        label: index + 1 + '',
+                        value: value + ''
+                    }
+                })
+                menuRow.setComponents([
+                    new StringSelectMenuBuilder()
+                        .setCustomId('select')
+                        .setPlaceholder('Selecione uma opção')
+                        .addOptions(a)
+                ])
                 if (current.length === 1) rowArr.splice(0,0, menuRow) // Add a menu if not exists
                 const values = parseSettingToArrayFields(current, this.overrides?.parseToField ?? this.child.parseToField)
                 embed.setFields(values)
@@ -165,7 +182,7 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
             /*
                 Remove events
              */
-            view.on('remove', async (i) => {
+            view.on('remove', async (_) => {
                 const removeEmbed = new EmbedBuilder()
                     .setTitle('Remover valor')
                     .setDescription('Selecione o valor que deseja remover')
@@ -191,7 +208,6 @@ export class ArrSettingFile implements Setting<Setting<any>[]> {
             })
             view.on('removeSelect', async (i) => {
                 const index = current.findIndex((value) => value === i.values[0])
-                console.log(index)
                 if (index === -1) return
                 await i.deferUpdate()
                 current.splice(index, 1)
@@ -287,7 +303,7 @@ export default {
                     components: rowArr
                 })
             })
-            view.on('confirm', async (i) => {
+            view.on('confirm', async (_) => {
                 await view.update({
                     content: 'Alterações confirmadas!',
                     embeds: [],
@@ -331,7 +347,7 @@ export default {
             /*
                 Remove events
              */
-            view.on('remove', async (i) => {
+            view.on('remove', async (_) => {
                 const removeEmbed = new EmbedBuilder()
                     .setTitle('Remover valor')
                     .setDescription('Selecione o valor que deseja remover')
@@ -357,7 +373,6 @@ export default {
             })
             view.on('removeSelect', async (i) => {
                 const index = current.findIndex((value) => value === i.values[0])
-                console.log(index)
                 if (index === -1) return
                 await i.deferUpdate()
                 current.splice(index, 1)
