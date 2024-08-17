@@ -37,7 +37,7 @@ export default async (client: ExtendedClient, module: Module) => {
         eventsByModule.push(...files)
         eventLogger.notice(`Loaded ${files.length} default events to the cache, and waiting for the client to be ready`);
     } else {
-        const files = await findJsFiles(`./modules/${module.folderName}/${module.data.eventsFolder}`, eventLogger);
+        const files = await findJsFiles(`${module.path}/${module.data.eventsFolder}`, eventLogger);
 
         /*
         for (const file of files) {

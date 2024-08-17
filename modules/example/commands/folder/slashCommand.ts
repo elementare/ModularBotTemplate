@@ -5,11 +5,11 @@ import {SlashCommandBuilder} from "discord.js";
 export default new SlashCommand({
     data: new SlashCommandBuilder()
         .setDefaultMemberPermissions(8)
-        .setName('comer')
-        .setDescription('Comer alguém'),
+        .setName('teste')
+        .setDescription('Lorem Ipsum'),
     func: async ({logger, interaction}) => {
-        logger.notice(`Comer command executed`);
-        await interaction.reply('Comer command executed');
+        logger.notice(`aa`);
+        await interaction.reply('aaaa');
     },
     global: true
 })

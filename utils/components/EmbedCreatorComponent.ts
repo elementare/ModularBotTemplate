@@ -1,4 +1,4 @@
-import {AnyView, MessageViewUpdate} from "../types";
+import {AnyView, MessageViewUpdate} from "../../types";
 import {
     ActionRowBuilder, APIEmbed,
     ButtonBuilder,
