@@ -42,8 +42,8 @@ function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
  */
 export class InteractionView extends EventEmitter {
     public readonly interaction: RepliableInteraction;
-    private readonly channel: TextBasedChannel;
-    private readonly client: ExtendedClient;
+    public readonly channel: TextBasedChannel;
+    public readonly client: ExtendedClient;
     private extraFilter: (interaction: RepliableInteraction) => boolean = () => true;
     private msgId: string = "0";
     private options: {ephemeral?: boolean} = {ephemeral: false}
@@ -66,7 +66,7 @@ export class InteractionView extends EventEmitter {
             if ((interaction as any).message && (interaction as any).message.id === this.msgId) {
                 const split = (interaction as any).customId.split("-")
                 const id = split.shift()
-                console.log(`interaction, id:${id}, currentViewId:${this.viewId},event:${(interaction as any).customId}`)
+                // console.log(`interaction, id:${id}, currentViewId:${this.viewId},event:${(interaction as any).customId}`)
                 if (this.extraFilter((interaction as RepliableInteraction))) {
                     if (this.timeout) this.timeout.refresh()
                     const viewId = split.pop()
@@ -95,6 +95,9 @@ export class InteractionView extends EventEmitter {
     public get Id() {
         return this.msgId
     }
+    public refreshTimeout() {
+        if (this.timeout) this.timeout.refresh()
+    }
     public setTimeout(ms: number) {
         if (this.timeout) clearTimeout(this.timeout)
         this.timeout = setTimeout(() => { this.destroy('time')}, ms)
@@ -102,6 +105,10 @@ export class InteractionView extends EventEmitter {
     }
     protected setMsgId(id: string) {
         this.msgId = id
+        return true
+    }
+    public setId(id: string) {
+        this.viewId = id
         return true
     }
     public setExtraFilter(filter: (interaction: RepliableInteraction) => boolean) {
@@ -114,8 +121,7 @@ export class InteractionView extends EventEmitter {
             if (this.interaction.replied) {
                 await this.interaction.editReply(view).then(() => {
                     return resolve(true)
-                }).catch((er) => {
-                    console.log(er)
+                }).catch(() => {
                     return resolve(false)
                 })
             } else {
@@ -141,7 +147,7 @@ export class InteractionView extends EventEmitter {
     public destroy(reason?: string) {
         if (this.timeout) clearTimeout(this.timeout)
         super.emit("end", reason || "destroy")
-        console.log("destroyed-" + this.viewId + "-" + reason)
+        // console.log("destroyed-" + this.viewId + "-" + reason)
         this.removeAllListeners()
         this.client.removeListener("interactionCreate", this.interactionListener as any)
         this.client.removeListener("messageDelete", this.messageDeleteListener as any)

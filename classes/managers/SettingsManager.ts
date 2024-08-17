@@ -1,6 +1,7 @@
-import {ConfigOption, DbSetting, ExtendedClient, SavedSetting} from "../../types";
+import { DbSetting, ExtendedClient} from "../../types";
 import {Logger} from "winston";
 import Guild from "../structs/Guild";
+import User from "../structs/User";
 type EncodedJSON = string // Just to make typings easier to read
 export default class GuildManager {
     private readonly client: ExtendedClient;
@@ -46,18 +47,16 @@ export default class GuildManager {
     /*
      * Save to database, does not update object
      */
-    setSetting(guild: Guild, setting: string, value: EncodedJSON): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
-            const settingData = guild.settings.get(setting)
-            if (!settingData) return reject('Setting not found')
-            const newData: DbSetting = {
-                name: settingData.name,
-                value: value
-            }
-            guild.data.settings.set(setting, newData)
-            await guild.data.save()
+    setSetting(entity: Guild | User, setting: string, value: unknown): Promise<boolean> {
+        return new Promise(async (resolve) => {
+            const newData: DbSetting = value
+            entity.data.settings.set(setting, newData)
+            entity.data.markModified('settings')
+            await entity.data.save()
+            this.client.guildHandler.invalidateCache(entity.id)
             return resolve(true)
         })
     }
+
 
 }

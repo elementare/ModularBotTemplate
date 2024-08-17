@@ -69,9 +69,9 @@ function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
 * Events: delete, any interaction component customId (Ex: Button with customId "button" will emit "button")
  */
 export class MessageView extends EventEmitter {
-    private readonly message: Message;
-    private readonly channel: TextBasedChannel;
-    private readonly client: ExtendedClient;
+    public readonly message: Message;
+    public readonly channel: TextBasedChannel;
+    public readonly client: ExtendedClient;
     private msgId: string = "0";
     private timeout: NodeJS.Timeout | null = null
     private readonly interactionListener: (interaction: RepliableInteraction<CacheType>) => Awaitable<void>
@@ -83,17 +83,17 @@ export class MessageView extends EventEmitter {
         this.channel = channel
         this.client = client
         this.message = message
+        this.msgId = message.id
         if (filter) this.extraFilter = filter
         if (timeout !== 0) this.setTimeout(timeout || 60000)
         this.interactionListener = (interaction) => {
             if ((interaction as any).message && (interaction as any).message.id === this.msgId) {
                 const split = (interaction as any).customId.split("-")
                 const id = split.shift()
-                console.log(`interaction, id:${id}, currentViewId:${this.viewId},event:${(interaction as any).customId}`)
                 if (this.extraFilter((interaction as RepliableInteraction))) {
                     if (this.timeout) this.timeout.refresh()
                     const viewId = split.pop()
-                    if (viewId !== this.viewId) return // This ensures that clones views don't emit events in the original view
+                    if (viewId && viewId !== this.viewId) return // This ensures that clones views don't emit events in the original view
                     super.emit(id, interaction, split)
                     super.emit("any", interaction)
                 }
@@ -117,6 +117,9 @@ export class MessageView extends EventEmitter {
     public get Id() {
         return this.msgId
     }
+    public refreshTimeout() {
+        if (this.timeout) this.timeout.refresh()
+    }
     public setTimeout(ms: number) {
         if (this.timeout) clearTimeout(this.timeout)
         this.timeout = setTimeout(() => { this.destroy('time')}, ms)
@@ -124,6 +127,10 @@ export class MessageView extends EventEmitter {
     }
     protected setMsgId(id: string) {
         this.msgId = id
+        return true
+    }
+    public setId(id: string) {
+        this.viewId = id
         return true
     }
     public setExtraFilter(filter: (interaction: RepliableInteraction) => boolean) {
@@ -152,7 +159,7 @@ export class MessageView extends EventEmitter {
     public destroy(reason?: string) {
         if (this.timeout) clearTimeout(this.timeout)
         super.emit("end", reason || "destroy")
-        console.log("destroyed-" + this.viewId + "-" + reason)
+        // console.log("destroyed-" + this.viewId + "-" + reason)
         this.removeAllListeners()
         this.client.removeListener("interactionCreate", this.interactionListener as any)
         this.client.removeListener("messageDelete", this.messageDeleteListener as any)

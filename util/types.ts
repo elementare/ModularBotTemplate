@@ -1,0 +1,1 @@
+export type InfiniteArray<T> = Array<T | InfiniteArray<T>>

@@ -5,7 +5,6 @@ import {
     ButtonStyle,
     EmbedBuilder
 } from "discord.js";
-import { SavedSetting, typeFile} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
 import {BaseSettingStructure, Setting} from "../Setting";
 
@@ -19,12 +18,14 @@ export class BooleanSettingFile implements Setting<boolean> {
     public permission?: bigint;
     public structure: BaseSettingStructure;
     public value?: boolean;
+    public id: string;
     constructor(setting: BaseSettingStructure, value?: boolean) {
         this.name = setting.name;
         this.description = setting.description;
         this.permission = setting.permission;
         this.structure = setting;
         this.value = value;
+        this.id = setting.id;
     }
 
     public run(view: InteractionView): Promise<boolean> {
@@ -42,7 +43,7 @@ export class BooleanSettingFile implements Setting<boolean> {
                         value: `${value ? 'Ativado' : 'Desativado'}`,
                     }
                 ])
-                .setColor(`#ffffff`)
+                .setColor(this.structure.color as `#${string}` ?? `#ffffff`)
             const buttons = new ActionRowBuilder<ButtonBuilder>()
                 .setComponents([
                     new ButtonBuilder()
@@ -83,74 +84,21 @@ export class BooleanSettingFile implements Setting<boolean> {
                 view.destroy()
                 resolve(newValue)
             })
-        })
-    }
-}
-
-
-
-
-
-export default {
-    name: 'boolean',
-    complex: false,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting) => {
-        return new Promise(async (resolve) => {
-            const value = !!(currentConfig?.value)
-            const embed = new EmbedBuilder()
-                .setTitle(`Configurar ${currentConfig.name}`)
-                .setFields([
-                    {
-                        name: 'Descrição',
-                        value: `${currentConfig.struc.description}`,
-                    },
-                    {
-                        name: 'Valor atual',
-                        value: `${value ? 'Ativado' : 'Desativado'}`,
-                    }
-                ])
-                .setColor(`#ffffff`)
-            const buttons = new ActionRowBuilder<ButtonBuilder>()
-                .setComponents([
-                    new ButtonBuilder()
-                        .setCustomId('activate')
-                        .setLabel('Ativar')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setDisabled(value),
-                    new ButtonBuilder()
-                        .setCustomId('deactivate')
-                        .setLabel('Desativar')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setDisabled(!value)
-                ])
-            await view.update({
-                embeds: [embed],
-                components: [buttons]
-            })
-            view.on('any', async (i: ButtonInteraction) => {
-                await i.deferUpdate()
-                const newValue = !value
+            view.on('end', async (reason: string) => {
+                if (reason !== 'time') return
                 const embed = new EmbedBuilder()
-                    .setTitle(`Configurar ${currentConfig.name}`)
-                    .setFields([
-                        {
-                            name: 'Descrição',
-                            value: `${currentConfig.struc.description}`,
-                        },
-                        {
-                            name: 'Valor atual',
-                            value: `${newValue ? 'Ativado' : 'Desativado'}`,
-                        }
-                    ])
+                    .setTitle(`Configurar ${this.name}`)
+                    .setDescription('Tempo esgotado')
                     .setColor(`#ffffff`)
                 await view.update({
                     embeds: [embed],
                     components: []
                 })
-                view.destroy()
-                view = undefined as any // Destroying view to prevent memory leaks
-                resolve(newValue)
+                resolve(value)
             })
         })
+    }
+    clone(): Setting<boolean> {
+        return new BooleanSettingFile(this.structure, this.value)
     }
 }

@@ -1,9 +1,14 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Collection, EmbedBuilder} from "discord.js";
 import {
-    typeFile
-} from "../../types";
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonInteraction,
+    ButtonStyle,
+    Collection,
+    EmbedBuilder, Guild,
+} from "discord.js";
 import {InteractionView} from "../../utils/InteractionView";
 import {Setting} from "../Setting";
+import {ExtendedClient} from "../../types";
 
 function mapSchema(schema: ComplexSettingStructure["schema"]): Collection<string, Setting<any>> {
     const mappedSchema = new Collection<string, Setting<any>>()
@@ -26,20 +31,22 @@ function chunkArr<T>(arr: T[], size: number): T[][] {
 
 function checkFilledSchema(currentConfig: ComplexSettingClass): boolean {
     for (const [key, value] of currentConfig.schema) {
-        if (!(currentConfig.value as any)?.[key]) return false
+        if (!(currentConfig.value as any)?.[key] && !currentConfig.optionals?.includes(key) && (currentConfig.value as any)?.[key] !== 0) return false
     }
     return true
 }
-
+type ComplexSchema = {
+    [key: string]: Setting<any>
+}
 type ComplexSettingStructure = {
     name: string
     description: string
-    permission: bigint
+    permission?: bigint
 
-    schema: {
-        [key: string]: Setting<any>
-    }
-    embed: EmbedBuilder
+    schema: ComplexSchema,
+    optionals?: string[]
+    id: string
+    updateFn: (value: Partial<ComplexSettingReturn>) => EmbedBuilder
 }
 
 type ComplexSettingReturn = {
@@ -50,22 +57,25 @@ export default class ComplexSettingClass implements Setting<ComplexSettingReturn
     public type = "complex"
     public name: string
     public description: string
-    public permission: bigint
+    public permission?: bigint
     public structure: ComplexSettingStructure
     public value?: ComplexSettingReturn
-    public embed: EmbedBuilder
-    public schema: Collection<string, ComplexSettingStructure["schema"][string]>
-
+    public schema: Collection<string, ComplexSchema[string]>
+    public id: string
+    public optionals?: string[]
+    public updateFn: (value: Partial<ComplexSettingReturn>) => EmbedBuilder
     constructor(setting: ComplexSettingStructure, value?: ComplexSettingReturn) {
         this.name = setting.name
         this.description = setting.description
         this.permission = setting.permission
         this.structure = setting
-        this.embed = setting.embed
-
+        this.id = setting.id
+        this.updateFn = setting.updateFn
         this.schema = mapSchema(setting.schema)
+        this.optionals = setting.optionals
 
         this.value = value
+
     }
 
     public run(view: InteractionView): Promise<ComplexSettingReturn> {
@@ -74,7 +84,7 @@ export default class ComplexSettingClass implements Setting<ComplexSettingReturn
                 return new ButtonBuilder()
                     .setCustomId(key)
                     .setLabel(value.name)
-                    .setStyle(ButtonStyle.Primary)
+                    .setStyle(this.optionals?.includes(key) ? ButtonStyle.Secondary : ButtonStyle.Primary)
             })
             const splitButtons = chunkArr(buttons, 5)
             const rows = splitButtons.map((value) => {
@@ -87,13 +97,14 @@ export default class ComplexSettingClass implements Setting<ComplexSettingReturn
                     .setLabel('Confirmar alterações')
                     .setStyle(ButtonStyle.Success)
             ]))
+            const embed = this.updateFn(this.value ?? {})
             await view.update({
-                embeds: [this.embed],
+                embeds: [embed],
                 components: rows
             })
             view.on('confirm', async (i: ButtonInteraction) => {
                 if (!checkFilledSchema(this)) {
-                    const newEmbed = new EmbedBuilder(this.embed.toJSON())
+                    const newEmbed = new EmbedBuilder(embed.toJSON())
                         .setFooter({text: 'Você não preencheu todos os campos! 💔'})
                         .setColor('#ff6767')
                     return view.update({
@@ -118,24 +129,53 @@ export default class ComplexSettingClass implements Setting<ComplexSettingReturn
 
                 await i.deferUpdate()
                 const key = i.customId.split('-')[0]
-                console.log(key)
                 const setting = this.schema.get(key)
-                console.log(setting)
                 if (!setting) return
                 let current = this.value ?? {}
-                setting.value = current[key]
-                await setting.run(view.clone()).then(async (value: any) => {
+                if (current[key]) setting.value = current[key] // Keep default value
+                setting.run(view.clone()).then(async (value: any) => {
 
                     current[key] = value
                     this.value = current
 
                     await view.update({
-                        embeds: [this.embed],
+                        embeds: [this.updateFn(current)],
                         components: rows
                     })
                 }).catch(() => {
                 })
+
             })
         })
+    }
+    public parseToDatabase(valuee: ComplexSettingReturn): string {
+        const parsed: any = {}
+        for (const [key, value] of this.schema) {
+            const setting = value
+            if (setting.parseToDatabase) {
+                parsed[key] = setting.parseToDatabase(valuee?.[key])
+            } else {
+                parsed[key] = valuee?.[key]
+            }
+        }
+        return parsed
+    }
+    public parse(config: any, client: ExtendedClient, guildData: any, DGuild: Guild): Promise<ComplexSettingReturn> {
+        return new Promise(async (resolve) => {
+            const parsed = config
+            const parsedObject: any = {}
+            for (const [key, value] of this.schema) {
+                const setting = value
+                if (setting.parse) {
+                    parsedObject[key] = await setting.parse(parsed[key], client, guildData, DGuild)
+                } else {
+                    parsedObject[key] = parsed[key]
+                }
+            }
+            return resolve(parsedObject)
+        })
+    }
+    public clone(): Setting<ComplexSettingReturn> {
+        return new ComplexSettingClass(this.structure, this.value)
     }
 }

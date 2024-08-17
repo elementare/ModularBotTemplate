@@ -4,11 +4,10 @@ import {
     ChannelSelectMenuInteraction,
     ChannelType,
     DMChannel,
-    EmbedBuilder, Guild, GuildBasedChannel,
-    PartialDMChannel,
-    TextBasedChannel
+    EmbedBuilder, Guild as DiscordGuild, GuildBasedChannel,
+    PartialDMChannel, User as DiscordUser
 } from "discord.js";
-import {ExtendedClient, SavedSetting, typeFile} from "../../types";
+import {ExtendedClient} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
 import {Setting} from "../Setting";
 
@@ -21,6 +20,8 @@ type ChannelSettingStructure = {
     placeholder?: string;
     embedDescription?: string;
     channelTypes?: ChannelType[];
+    id: string;
+    color?: string;
 }
 
 export class ChannelSettingFile implements Setting<GuildBasedChannel> {
@@ -36,6 +37,7 @@ export class ChannelSettingFile implements Setting<GuildBasedChannel> {
     public readonly placeholder?: string;
     public readonly descriptionMetadata?: string;
     public readonly channelTypes?: ChannelType[];
+    public readonly id: string;
     constructor(setting: ChannelSettingStructure, value?: GuildBasedChannel) {
         this.name = setting.name;
         this.description = setting.description;
@@ -46,24 +48,25 @@ export class ChannelSettingFile implements Setting<GuildBasedChannel> {
         this.placeholder = setting.placeholder;
         this.descriptionMetadata = setting.embedDescription;
         this.channelTypes = setting.channelTypes;
+        this.id = setting.id;
 
 
         this.value = value;
     }
     public run(view: InteractionView): Promise<GuildBasedChannel> {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             const channelSelectMenu = new ChannelSelectMenuBuilder()
                 .setMaxValues(this.max || 1)
                 .setMinValues(this.min || 1)
                 .setPlaceholder(this.placeholder || 'Selecione um canal')
                 .setCustomId('select')
-                .setChannelTypes(ChannelType.GuildText ?? this.channelTypes)
+                .setChannelTypes(this.channelTypes ? this.channelTypes : [ChannelType.GuildText])
             const row = new ActionRowBuilder<ChannelSelectMenuBuilder>()
                 .setComponents([channelSelectMenu])
             const embed = new EmbedBuilder()
                 .setTitle(`Configurar ${this.name}`)
                 .setDescription(this.descriptionMetadata || 'Selecione um canal' + (this.value ? `\nChat atual: ${this.value.toString()}` : '') )
-                .setColor(`#ffffff`)
+                .setColor(this.structure.color as `#${string}` ?? `#ffffff`)
             await view.update({
                 embeds: [embed],
                 components: [row],
@@ -85,13 +88,18 @@ export class ChannelSettingFile implements Setting<GuildBasedChannel> {
                     components: [],
                     content: 'Tempo esgotado'
                 })
-                reject()
+                // @ts-ignore
+                resolve(undefined)
             })
         })
     }
-    public parse(config: string, client: ExtendedClient, guildData: any, guild: Guild): Promise<GuildBasedChannel> {
+    public parseToDatabase(value: GuildBasedChannel) {
+        return value.id
+    }
+    public parse(config: string, client: ExtendedClient, guildData: any, discordGuildOrUser: DiscordGuild | DiscordUser): Promise<GuildBasedChannel> {
         return new Promise(async (resolve, reject) => {
-            await guild.channels.fetch(JSON.parse(config)).then(channel => {
+            if (discordGuildOrUser instanceof DiscordUser) return reject('Host is not a guild')
+            await discordGuildOrUser.channels.fetch(config).then(channel => {
                 resolve(channel as GuildBasedChannel)
             }).catch(() => reject)
         })
@@ -99,57 +107,7 @@ export class ChannelSettingFile implements Setting<GuildBasedChannel> {
     public parseToField(value: Exclude<GuildBasedChannel, DMChannel | PartialDMChannel>) {
         return `Nome: ${value.name}\nID: ${value.id}`
     }
-}
-
-
-export default {
-    name: 'channel',
-    complex: true,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata) => {
-        return new Promise(async (resolve, reject) => {
-            const channelSelectMenu = new ChannelSelectMenuBuilder()
-                .setMaxValues(metadata?.max || 1)
-                .setMinValues(metadata?.min || 1)
-                .setPlaceholder(metadata?.placeholder || 'Selecione um canal')
-                .setCustomId('select')
-                .setChannelTypes(ChannelType.GuildText ?? metadata?.channelTypes)
-            const row = new ActionRowBuilder<ChannelSelectMenuBuilder>()
-                .setComponents([channelSelectMenu])
-            const embed = new EmbedBuilder()
-                .setTitle(`Configurar ${currentConfig.name}`)
-                .setDescription(metadata?.description || 'Selecione um canal' + (currentConfig.value ? `\nChat atual: ${currentConfig.value.toString()}` : '') )
-                .setColor(`#ffffff`)
-            await view.update({
-                embeds: [embed],
-                components: [row],
-            })
-            view.on('select', async (interaction: ChannelSelectMenuInteraction) => {
-                await interaction.deferUpdate()
-                embed.setDescription(`Canal selecionado: <#${interaction.values[0]}>`)
-                await view.update({
-                    embeds: [embed],
-                    components: []
-                })
-                view.destroy()
-                resolve(interaction.channels.first()?.id)
-            })
-            view.once('end', (reason) => {
-                if (reason !== 'time') return
-                view.update({
-                    embeds: [],
-                    components: [],
-                    content: 'Tempo esgotado'
-                })
-                reject()
-            })
-        })
-    },
-    parse: async (config, client, guildData, guild) => {
-        return await guild.channels.fetch(JSON.parse(config)).catch(() => undefined)
-    },
-    parseSettingToArrayFields: (value: Exclude<TextBasedChannel, DMChannel | PartialDMChannel>) => {
-        return `Nome: ${value.name}\nID: ${value.id}`
+    clone(): Setting<GuildBasedChannel> {
+        return new ChannelSettingFile(this.structure, this.value)
     }
-
-
-} as typeFile
+}

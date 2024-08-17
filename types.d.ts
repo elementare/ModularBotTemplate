@@ -1,8 +1,7 @@
-import mongoose, {Schema} from "mongoose";
+import mongoose, { HydratedDocument, Schema} from "mongoose";
 import winston, {Logger} from "winston";
 import {
     AutocompleteInteraction,
-    Channel,
     ChatInputCommandInteraction,
     Client,
     ClientEvents,
@@ -11,8 +10,7 @@ import {
     Message,
     Role,
     SlashCommandBuilder,
-    VoiceState,
-    Guild as DiscordGuild, APIEmbed, BaseMessageOptions
+    VoiceState, APIEmbed, BaseMessageOptions, TextChannel
 } from "discord.js";
 import ProfileManager from "./classes/managers/UserManager";
 import GuildManager from "./classes/managers/GuildManager"
@@ -26,6 +24,10 @@ import SettingsManager from "./classes/managers/SettingsManager";
 import {InteractionView} from "./utils/InteractionView";
 import {MessageView} from "./utils/MessageView";
 import {Setting} from "./settings/Setting";
+import AsyncLock from "async-lock";
+import {settingData} from "./index";
+import {FlagsManager} from "./classes/managers/FlagsManager";
+import {PermissionsManager} from "./classes/managers/PermissionsManager";
 
 type configFunc = (args: {
     client: ExtendedClient,
@@ -61,15 +63,21 @@ class BaseModuleInterfacer {
     [key: string]: any;
 }
 
-interface CommandConstructor {
+interface BaseCommandConstructor {
+    disabled?: boolean,
+    appearsInHelp?: boolean,
+}
+
+interface CommandConstructor extends BaseCommandConstructor {
     name: string,
     aliases: Array<string>,
     description: string,
     howToUse: string,
-    func: (args: CommandArgs) => void
+    func: (args: CommandArgs) => void,
+    permissions?: bigint[],
 }
 
-interface SlashCommandConstructor {
+interface SlashCommandConstructor extends BaseCommandConstructor {
     data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption"> | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
     func: (args: SlashCommandArgs) => void,
     global?: boolean,
@@ -105,7 +113,11 @@ type MiddlewareArgs = {
 interface ExtendedClient extends Client {
     logger: Logger;
 
+    globalLock: AsyncLock;
+
     commands: CommandsMap;
+
+    flags: FlagsManager;
 
     typesCollection: Collection<string, typeFile>;
 
@@ -115,12 +127,15 @@ interface ExtendedClient extends Client {
 
     slashHandler: SlashManager;
 
+    permissionHandler: PermissionsManager;
+
     commandMiddleware: ((args: MiddlewareArgs) => Promise<boolean>)[];
 
     modules: Collection<string, Module>;
     defaultModels: {
         user: mongoose.Model<any>,
-        guild: mongoose.Model<any>
+        guild: mongoose.Model<any>,
+        setting: settingData
     };
     settingsHandler: SettingsManager;
     cachedEvents: Collection<string, Event<any>[]>;
@@ -177,26 +192,34 @@ interface RawManifest {
     initFile: string,
     eventsFolder: string,
     commandsFolder: string,
-    configUpdateFile?: string
+    disabled?: boolean,
 }
 
 type CommandsMap = {
     slash: Collection<string, SlashCommand>,
     text: Collection<string, Command>
 }
-
+export type settingDoc = HydratedDocument<{
+    module: string,
+    settings: Map<string, any>,
+    data: Object<any>
+}>
 interface Module {
     name: string,
-    folderName: string,
+    path: string,
     description: string,
     version: string,
     color: string,
     logger: winston.Logger,
-    initFunc: (client: ExtendedClient, moduleLogger: Logger) => Promise<BaseModuleInterfacer>,
+    initFunc: (
+        client: ExtendedClient,
+        moduleData: settingDoc,
+        moduleLogger: Logger) => Promise<BaseModuleInterfacer>,
     data: Manifest,
     commands?: CommandsMap,
     interfacer: BaseModuleInterfacer,
-    settings: Setting<any>[]
+    settings: Setting<unknown>[]
+    userSettings: Setting<unknown>[]
 }
 
 export interface ExtendedClientEvents extends ClientEvents {
@@ -243,182 +266,26 @@ interface CommandArgs {
     logger: Logger,
     message: Message,
     profile: User,
-    args: Array,
+    args: Array<string>,
     guild: Guild,
-    interfacer: BaseModuleInterfacer
+    interfacer: BaseModuleInterfacer,
+    usedName: string
 }
 
-type Options = {
-    text: string,
-    number: number,
-    boolean: boolean,
-    role: string,
-    channel: string,
-    user: string,
-    button: boolean,
-    select: Array<string>,
-    list: Array<{
-        id: string,
-        value: PrimitiveOptions[keyof PrimitiveOptions]
-    }>,
-    object: Array<{
-        id: string,
-        value: PrimitiveOptions[keyof PrimitiveOptions]
-    }>
-}
-type ReturnOptions = {
-    text: string,
-    number: number,
-    boolean: boolean,
-    role: Role,
-    channel: Channel,
-    user: User,
-    button: boolean,
-    select: Array<string>,
-    list: Array<Options["list"]>,
-    object: Array<{ id: string, value: PrimitiveOptions[keyof PrimitiveOptions] }> // GenericPrimitiveOption<keyof Omit<PrimitiveOptions, 'object'>>
-}
-type PrimitiveOptions = Omit<Options, "select" | "list" | "button" | "object">
-type GenericPrimitiveOption<K extends keyof PrimitiveOptions> = {
-    name: string,
-    id: string,
-    description: string,
-    default?: Options[K],
-    type: K,
-    value?: ReturnOptions[K],
-    updateFunction?: configFunc
-}
-type GenericOption =
-    GenericPrimitiveOption<keyof PrimitiveOptions>
-    | SelectOption
-    | ListOption
-    | ObjectOption
-    | ButtonOption
-
-type ObjectOption = {
-    name: string,
-    id: string,
-    description: string,
-    type: "object",
-    structure: Array<Omit<GenericPrimitiveOption<keyof PrimitiveOptions>, "default">>,
-    default?: Options["object"],
-    value?: Options["object"],
-    updateFunction?: configFunc
-}
-type ButtonOption = {
-    name: string,
-    id: string,
-    description: string,
-    type: "button",
-    default?: Options["button"],
-    value?: ReturnOptions["button"],
-    updateFunction?: configFunc
-}
-
-
-type SelectOption = {
-    name: string,
-    id: string,
-    description: string,
-    max: number, // 0 = all
-    min: number, // cant be 0 or below
-    type: "select",
-    default?: Options["select"],
-    value?: ReturnOptions["select"],
-    options: Array<{
-        id: string,
-        value: string,
-        name: string,
-    }>,
-    updateFunction?: configFunc
-}
-
-type ListOption = {
-    name: string,
-    id: string,
-    description: string,
-    type: "list",
-    value?: Array<Options["list"]>,
-    structure: Array<Omit<GenericPrimitiveOption<keyof PrimitiveOptions>, "default">>,
-    default?: Array<Options["list"]>,
-    updateFunction?: configFunc
-}
-
-type SettingStructureBaseTypes = "string" | "number" | "boolean" | "embed"
-type SettingStructureTypesAdditions = "arr"
-type SettingStructureTypesFullNonComplex =
-    `${SettingStructureBaseTypes}-${SettingStructureTypesAdditions}`
-    | SettingStructureBaseTypes
-
-type SchemaSetting = {
-    name: string,
-    type: SettingStructureTypesFullNonComplex,
-    description: string,
-} | SchemaComplexSetting  | SchemaCustomSetting
-type SchemaCustomSetting = {
-    name: string,
-    type: Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">
-    description: string,
-    metadata?: any
-}
-type SchemaComplexSetting = {
-    name: string,
-    type: "complex" | "complex-arr",
-    embed: any
-    schema: {
-        [key: string]: SchemaSetting
-    },
-    description: string,
-    metadata: (value: any) => string | undefined // This is a function for defining fields in the metadata embed
-}
-type ComplexSetting = {
-    name: string,
-    description: string,
-    type: "complex" | "complex-arr"
-    embed: any
-    schema: {
-        [key: string]: SchemaSetting
-    }
-    default?: any,
-    permission: bigint
-}
-type CustomSetting = {
-    name: string,
-    type: Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">
-    description: string,
-    default?: any,
-    permission: bigint,
-    metadata?: any
-}
-type SettingStructure = {
-    name: string
-    description: string
-    type: SettingStructureTypesFullNonComplex
-    default?: any,
-    permission: bigint
-} | ComplexSetting | CustomSetting
-
-
-type SavedSetting = {
-    name: string,
-    value: any,
-    permission: bigint,
-    type: SettingStructureTypesFullNonComplex | "complex" | "complex-arr" | Exclude<string, SettingStructureTypesFullNonComplex | "complex" | "complex-arr">,
-    struc: SettingStructure
-    metadata?: any
-}
-type DbSetting = {
-    name: string,
-    value: any
-}
-type typeFile = {
-    name: string,
-    complex: boolean,
-    run: (view: InteractionView, types: typeFile[], currentConfig: SavedSetting, metadata?: any | undefined) => any,
-    parse?: (config: string, client: ExtendedClient, guildData: any, guild: DiscordGuild) => any,
-    parseSettingToArrayFields?: (value: any) => string,
-}
+type DbSetting = unknown
 
 type MessageViewUpdate = BaseMessageOptions
 
 type AnyView = MessageView | InteractionView
+
+type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> & U;
+
+type RecursiveMap<T> = Map<string, RecursiveMap<T> | T>
+// type PermissionsOverride = Map<string, BaseOverride>
+type OverrideNode = {
+    allow: string[],
+    deny: string[]
+}
+type PermissionOverrideTree = RecursiveMap<OverrideNode>
+
+type PermissionNode = (client: ExtendedClient, path: string, member: GuildMember, channel: TextChannel) => Awaitable<boolean>

@@ -59,7 +59,7 @@ export default async (client: Client, module: Module):Promise<CommandsMap> => {
         }
         return commands;
     } else {
-        const {text, slash} = await findJsFiles(`./modules/${module.folderName}/${module.data.commandsFolder}`, commandLogger, module.logger, module.name);
+        const {text, slash} = await findJsFiles(`${module.path}/${module.data.commandsFolder}`, commandLogger, module.logger, module.name);
         const commands = {
             slash: new Collection<string, SlashCommand>(),
             text: new Collection<string, Command>()

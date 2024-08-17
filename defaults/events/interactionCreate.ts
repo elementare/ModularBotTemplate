@@ -9,6 +9,7 @@ export const event: Event<"interactionCreate"> = {
             if (!command) return;
             if (!command.logger) command.logger = logger.child({fallback: true});
             if (!command.module) return;
+            if (command.disabled) return interaction.reply({content: 'Este comando está desativado temporariamente', ephemeral: true});
             const module = client.modules.get(command.module)
             if (!module) return;
             try {
@@ -23,7 +24,7 @@ export const event: Event<"interactionCreate"> = {
                     })
                     if (!result) return;
                 }
-                await command.func({
+                command.func({
                     client,
                     logger: command.logger,
                     interaction,
@@ -31,6 +32,21 @@ export const event: Event<"interactionCreate"> = {
                     guild: await client.guildHandler.fetchOrCreate(interaction.guildId),
                     interfacer: module.interfacer
                 });
+                client.logger.info(`Command executed: ${command.data.name}`, {
+                    command: {
+                        name: command.data.name,
+                        module: command.module,
+                        typedName: command.data.name
+                    },
+                    guild: {
+                        name: interaction.guild?.name,
+                        id: interaction.guild?.id
+                    },
+                    user: {
+                        name: interaction.user.username,
+                        id: interaction.user.id
+                    }
+                })
             } catch (error) {
                 console.log(error);
                 logger.error(error);

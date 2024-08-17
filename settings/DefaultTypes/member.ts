@@ -1,10 +1,7 @@
 import {
     ActionRowBuilder,
-    EmbedBuilder,
-    Guild,
-    Role,
-    RoleSelectMenuBuilder,
-    RoleSelectMenuInteraction
+    EmbedBuilder, Guild, GuildMember,
+    UserSelectMenuBuilder, UserSelectMenuInteraction
 } from "discord.js";
 import {InteractionView} from "../../utils/InteractionView";
 import {Setting} from "../Setting";
@@ -23,21 +20,21 @@ type RoleSettingStructure = {
     color?: string;
 }
 
-export class RoleSettingFile implements Setting<Role> {
-    public type = 'role';
+export class MemberSettingFile implements Setting<GuildMember> {
+    public type = 'member';
     public complex = true;
     public name: string;
     public description: string;
     public permission?: bigint;
     public structure: RoleSettingStructure;
-    public value?: Role;
+    public value?: GuildMember;
     public readonly max?: number;
     public readonly min?: number;
     public readonly placeholder?: string;
     public readonly descriptionMetadata?: string;
     public readonly id: string;
 
-    constructor(setting: RoleSettingStructure, value?: Role) {
+    constructor(setting: RoleSettingStructure, value?: GuildMember) {
         this.name = setting.name;
         this.description = setting.description;
         this.permission = setting.permission;
@@ -52,31 +49,32 @@ export class RoleSettingFile implements Setting<Role> {
         this.value = value;
     }
 
-    run(view: InteractionView): Promise<Role> {
+    run(view: InteractionView): Promise<GuildMember> {
         return new Promise(async (resolve, reject) => {
-            const roleSelectMenu = new RoleSelectMenuBuilder()
+            const roleSelectMenu = new UserSelectMenuBuilder()
                 .setMaxValues(this.max || 1)
                 .setMinValues(this.min || 1)
-                .setPlaceholder(this.placeholder || 'Selecione um canal')
+                .setPlaceholder(this.placeholder || 'Selecione uma pessoa')
                 .setCustomId('select')
-            const row = new ActionRowBuilder<RoleSelectMenuBuilder>()
+            const row = new ActionRowBuilder<UserSelectMenuBuilder>()
                 .setComponents([roleSelectMenu])
             const embed = new EmbedBuilder()
                 .setTitle(`Configurar ${this.name}`)
-                .setDescription(this.description || 'Selecione um cargo')
+                .setDescription(this.description || 'Selecione uma pessoa')
                 .setColor(this.structure.color as `#${string}` ?? `#ffffff`)
             await view.update({
                 embeds: [embed],
                 components: [row],
             })
-            view.on('select', async (interaction: RoleSelectMenuInteraction) => {
+            view.on('select', async (interaction: UserSelectMenuInteraction) => {
                 await interaction.deferUpdate()
-                embed.setDescription(`Cargo selecionado: <@&${interaction.values[0]}>`)
+                if (interaction.values.length > 1) embed.setDescription(`Pessoas selecionadas: ${interaction.users.map(user => user.username).join(', ')}`)
+                else embed.setDescription(`Pessoa selecionada: ${interaction.users.first()?.username}`)
                 await view.update({
                     embeds: [embed],
                     components: []
                 })
-                resolve(interaction.roles.first() as Role)
+                resolve(interaction.members.first() as GuildMember)
             })
             view.once('end', (reason) => {
                 if (reason !== 'time') return
@@ -91,20 +89,21 @@ export class RoleSettingFile implements Setting<Role> {
     }
 
     parse(config: string, client: ExtendedClient, data: any, guild: Guild) {
-        return new Promise<Role>(async (resolve) => {
+        return new Promise<GuildMember>(async (resolve, reject) => {
             const id = config
-            resolve((guild.roles.cache.get(id) ?? await guild.roles.fetch(id).catch(() => {
-                return undefined
-            })) as Role )
+            const member = guild.members.cache.get(id) ?? await guild.members.fetch(id).catch(() => {
+            })
+            if (!member) return reject('Membro não encontrado')
+            resolve(member)
         })
     }
-    parseToField(value: Role) {
-        return `Nome: ${value.name}\nMenção: <@&${value.id}>`
+    parseToField(value: GuildMember) {
+        return `Nome: ${value.user.username}\nMenção: ${value}\nID: ${value.id}`
     }
-    parseToDatabase(value: Role) {
+    parseToDatabase(value: GuildMember) {
         return value.id
     }
     clone() {
-        return new RoleSettingFile(this.structure, this.value)
+        return new MemberSettingFile(this.structure, this.value)
     }
 }
