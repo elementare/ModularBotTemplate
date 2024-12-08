@@ -3,7 +3,7 @@ import {
     ButtonBuilder,
     ButtonStyle,
     EmbedBuilder, Guild as DiscordGuild,
-    StringSelectMenuBuilder, User as DiscordUser
+    StringSelectMenuBuilder
 } from "discord.js";
 import {ExtendedClient} from "../../types";
 import {InteractionView} from "../../utils/InteractionView";
@@ -281,7 +281,10 @@ export class ArraySetting implements Setting<Setting<unknown>["value"][]> {
             if (this.child.parse) {
                 const parsedArray: Return[] = []
                 for (const value of untreatedArray) {
-                    const parsed = await this.child.parse(value, client, guildData, guild)
+                    const parsed = await this.child.parse(value, client, guildData, guild).catch(() => undefined)
+                    if (!parsed) {
+                        continue
+                    }
                     parsedArray.push(parsed)
                 }
                 resolve(parsedArray)

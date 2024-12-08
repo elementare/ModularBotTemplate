@@ -1,4 +1,4 @@
-import {SlashCommandBuilder} from "discord.js";
+import {SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder} from "discord.js";
 import {
     BaseCommandConstructor,
     SlashCommandArgs,
@@ -8,7 +8,7 @@ import {
 import {Logger} from "winston";
 
 export default class SlashCommand implements BaseCommandConstructor {
-    public readonly data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">;
+    public readonly data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption">;
     public readonly func: (args: SlashCommandArgs) => void;
     public logger?: Logger;
 

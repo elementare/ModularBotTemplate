@@ -1,19 +1,20 @@
 import {
     ActionRowBuilder,
     ButtonInteraction,
-    EmbedBuilder,
+    EmbedBuilder, GuildTextBasedChannel,
     InteractionCollector,
     Message,
     TextBasedChannel
 } from "discord.js";
 import {EventEmitter} from "events";
+import {PartialGroupDMIsANightmare} from "../../types";
 
 
 export class EmbedMenu extends EventEmitter {
     private embed: EmbedBuilder;
     private row: ActionRowBuilder<any>[];
-    private channel: TextBasedChannel;
-    private msg: Message;
+    private channel: GuildTextBasedChannel;
+    private msg: PartialGroupDMIsANightmare;
     private collector: InteractionCollector<ButtonInteraction>;
     private last: {
         embed: EmbedBuilder,
@@ -29,9 +30,9 @@ export class EmbedMenu extends EventEmitter {
             embed: embed,
             row: rowArray
         }
-        this.msg = msg
+        this.msg = msg as PartialGroupDMIsANightmare
         this.row = rowArray
-        this.channel = msg.channel
+        this.channel = msg.channel as GuildTextBasedChannel
         this.authorUserId = authorId
         const collector = this.channel.createMessageComponentCollector({
             time: 60000,

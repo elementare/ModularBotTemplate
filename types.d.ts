@@ -10,7 +10,13 @@ import {
     Message,
     Role,
     SlashCommandBuilder,
-    VoiceState, APIEmbed, BaseMessageOptions, TextChannel
+    VoiceState,
+    APIEmbed,
+    BaseMessageOptions,
+    TextChannel,
+    TextBasedChannel,
+    PartialGroupDMChannel,
+    OmitPartialGroupDMChannel, SlashCommandSubcommandsOnlyBuilder, SlashCommandOptionsOnlyBuilder, Interaction
 } from "discord.js";
 import ProfileManager from "./classes/managers/UserManager";
 import GuildManager from "./classes/managers/GuildManager"
@@ -78,7 +84,7 @@ interface CommandConstructor extends BaseCommandConstructor {
 }
 
 interface SlashCommandConstructor extends BaseCommandConstructor {
-    data: SlashCommandBuilder | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption"> | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
+    data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder |  SlashCommandBuilder | Omit<SlashCommandBuilder, "addBooleanOption" | "addUserOption" | "addChannelOption" | "addRoleOption" | "addAttachmentOption" | "addMentionableOption" | "addStringOption" | "addIntegerOption" | "addNumberOption"> | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
     func: (args: SlashCommandArgs) => void,
     global?: boolean,
     autoCompleteFunc?: (args: SlashCommandAutoCompleteArgs) => void
@@ -87,7 +93,7 @@ interface SlashCommandConstructor extends BaseCommandConstructor {
 interface SlashCommandArgs {
     client: ExtendedClient,
     logger: Logger,
-    interaction: ChatInputCommandInteraction,
+    interaction: IDoNotCareAboutPartialGroupDMs<ChatInputCommandInteraction>,
     profile: User,
     guild: Guild,
     interfacer: BaseModuleInterfacer
@@ -264,7 +270,7 @@ interface DynamicEvent {
 interface CommandArgs {
     client: ExtendedClient,
     logger: Logger,
-    message: Message,
+    message: Message<true>,
     profile: User,
     args: Array<string>,
     guild: Guild,
@@ -289,3 +295,7 @@ type OverrideNode = {
 type PermissionOverrideTree = RecursiveMap<OverrideNode>
 
 type PermissionNode = (client: ExtendedClient, path: string, member: GuildMember, channel: TextChannel) => Awaitable<boolean>
+
+type PartialGroupDMIsANightmare = OmitPartialGroupDMChannel<Message<boolean>>
+
+type IDoNotCareAboutPartialGroupDMs<T> = OmitPartialGroupDMChannel<T>

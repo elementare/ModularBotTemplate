@@ -4,7 +4,6 @@ import {Collection, Guild as discordGuild} from "discord.js";
 import {Logger} from "winston";
 import {Setting} from "../../settings/Setting";
 import {StopWatch} from "@slime/stopwatch";
-import {tryParseJSON} from "../../util/stringRelated";
 
 async function getAllSettings(client: ExtendedClient, guildData: any, guild: discordGuild, logger: Logger) {
     const settings = client.modules.map((module) => module.settings).flat()
@@ -81,12 +80,16 @@ export default class GuildManager {
         }
     }
 
-    fetchOrCreate(id: string): Promise<Guild> {
+    fetchOrCreate(id: string, force?: boolean): Promise<Guild> {
         return new Promise(async (resolve, err) => {
             if (this.client.globalLock.isBusy('fullyReady')) await this.client.globalLock.acquire('fullyReady', () => {
             })
 
-            const guild = await this.client.guilds.fetch(id)
+            const guild =
+                force ?
+                    this.client.guilds.cache.get(id) || await this.client.guilds.fetch(id).catch(() => {}) :
+                    await this.client.guilds.fetch(id).catch(() => {})
+
             if (!guild) return err('No guild!')
             let guildData = await this.client.defaultModels.guild.findOne({id: id})
             if (!guildData) {
@@ -111,7 +114,7 @@ export default class GuildManager {
             if (!guildProfiles || guildProfiles.length === 0) return err('No guild profiles!')
             const guilds: Guild[] = []
             for (const guildProfile of guildProfiles) {
-                const guild = await this.client.guilds.fetch(guildProfile.id)
+                const guild = this.client.guilds.cache.get(guildProfile.id) || await this.client.guilds.fetch(guildProfile.id).catch(() => {})
                 if (!guild) continue
                 const settings = this.settingCache.get(guild.id) ?? await getAllSettings(this.client, guildProfile, guild, this.logger)
                 this.settingCache.set(guild.id, settings)

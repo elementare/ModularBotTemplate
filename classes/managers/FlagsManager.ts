@@ -6,7 +6,7 @@ import {Logger} from "winston";
 
 export class FlagsManager {
     public client: ExtendedClient;
-    public flags: Collection<string, string | boolean>;
+    public flags: Collection<string, string | boolean | string[]>;
     private logger: Logger;
 
     constructor(client: ExtendedClient, logger: Logger) {
@@ -15,7 +15,7 @@ export class FlagsManager {
         this.logger = logger
     }
 
-    public registerFlag(flag: string, defaultValue: string | boolean) {
+    public registerFlag(flag: string, defaultValue: string | boolean | string[]) {
         if (this.flags.has(flag)) {
             this.logger.warning(`Flag ${flag} already exists, overwriting`)
         }

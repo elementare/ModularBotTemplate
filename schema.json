@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/example.json",
+  "type": "object",
+  "default": {},
+  "title": "Root Schema",
+  "required": [
+    "name",
+    "description",
+    "version",
+    "initFile",
+    "color"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "default": "",
+      "title": "Nome do modulo",
+      "description": "Nome do modulo",
+      "examples": [
+        "Exemplo"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "default": "",
+        "title": "Descrição do modulo",
+      "description": "Descrição do modulo",
+      "examples": [
+        "Modulo de exemplo"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "default": "",
+        "title": "Versão do modulo",
+        "description": "Versão do modulo",
+      "examples": [
+        "1.0.0"
+      ]
+    },
+    "schemaDataFile": {
+      "type": "string",
+      "default": "",
+      "title": "Schema de dados",
+        "description": "Schema de dados do modulo, deve exportar user ou guild",
+      "examples": [
+        "schemas.ts"
+      ]
+    },
+    "initFile": {
+      "type": "string",
+      "default": "",
+        "title": "Arquivo de inicialização",
+        "description": "Arquivo de inicialização do modulo",
+      "examples": [
+        "index.ts"
+      ]
+    },
+    "color": {
+      "type": "string",
+      "default": "",
+        "title": "Cor do modulo",
+        "description": "Cor do modulo",
+      "examples": [
+        "#ffaaff"
+      ]
+    },
+    "eventsFolder": {
+      "type": "string",
+      "default": "",
+      "title": "Caminho da pasta de eventos",
+        "description": "Caminho da pasta de eventos",
+      "examples": [
+        "events"
+      ]
+    },
+    "commandsFolder": {
+      "type": "string",
+      "default": "",
+        "title": "Caminho da pasta de comandos",
+            "description": "Caminho da pasta de comandos",
+      "examples": [
+        "commands"
+      ]
+    },
+    "disabled": {
+      "type": "boolean",
+      "title": "Desabilitado",
+      "description": "Configura se o modulo é habilitado ou não",
+      "examples": [
+        false
+      ]
+    }
+  },
+  "examples": [{
+    "name": "Exemplo",
+    "description": "Modulo de exemplo",
+    "version": "1.0.0",
+    "schemaDataFile": "schemas.ts",
+    "initFile": "index.ts",
+    "color": "#ffffff",
+    "eventsFolder": "events",
+    "commandsFolder": "commands"
+  }]
+}
