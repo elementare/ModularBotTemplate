@@ -1,7 +1,7 @@
 import {ExtendedClient, MessageViewUpdate} from "../types";
 import {
     ActionRowBuilder,
-    CacheType,
+    CacheType, GuildTextBasedChannel,
     Message,
     RepliableInteraction,
     TextBasedChannel
@@ -42,7 +42,7 @@ function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
  */
 export class InteractionView extends EventEmitter {
     public readonly interaction: RepliableInteraction;
-    public readonly channel: TextBasedChannel;
+    public readonly channel: GuildTextBasedChannel;
     public readonly client: ExtendedClient;
     private extraFilter: (interaction: RepliableInteraction) => boolean = () => true;
     private msgId: string = "0";
@@ -54,7 +54,7 @@ export class InteractionView extends EventEmitter {
     private readonly parent: InteractionView | null = null
     constructor(interaction: RepliableInteraction, channel: TextBasedChannel, client: ExtendedClient, extendedOptions?: ExtraOptions, parent: InteractionView | null = null) {
         super()
-        this.channel = channel
+        this.channel = channel as GuildTextBasedChannel
         this.client = client
         this.interaction = interaction
         this.parent = parent

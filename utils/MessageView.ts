@@ -1,5 +1,13 @@
 import {ExtendedClient, MessageViewUpdate} from "../types";
-import {ActionRowBuilder, CacheType, Interaction, Message, RepliableInteraction, TextBasedChannel} from "discord.js";
+import {
+    ActionRowBuilder,
+    CacheType,
+    GuildTextBasedChannel,
+    Interaction,
+    Message,
+    RepliableInteraction,
+    TextBasedChannel
+} from "discord.js";
 import {EventEmitter} from "events";
 import {Awaitable} from "@discordjs/util";
 
@@ -7,7 +15,7 @@ type ExtraOptions = {
     filter: (interaction: RepliableInteraction) => boolean,
 }
 
-export function CreateView(channel: TextBasedChannel, client: ExtendedClient, view: MessageViewUpdate, options?: ExtraOptions): Promise<MessageView> {
+export function CreateView(channel: GuildTextBasedChannel, client: ExtendedClient, view: MessageViewUpdate, options?: ExtraOptions): Promise<MessageView> {
     return new Promise(async (resolve, reject) => {
         await channel.send(view).then((msg) => {
             const viewClass = new MessageView(msg, channel, client, options?.filter)
@@ -70,7 +78,7 @@ function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
  */
 export class MessageView extends EventEmitter {
     public readonly message: Message;
-    public readonly channel: TextBasedChannel;
+    public readonly channel: GuildTextBasedChannel;
     public readonly client: ExtendedClient;
     private msgId: string = "0";
     private timeout: NodeJS.Timeout | null = null
@@ -80,7 +88,7 @@ export class MessageView extends EventEmitter {
     private extraFilter: (interaction: RepliableInteraction) => boolean = () => true;
     constructor(message: Message, channel: TextBasedChannel, client: ExtendedClient, filter?: (interaction: RepliableInteraction) => boolean, timeout?: number ) {
         super()
-        this.channel = channel
+        this.channel = channel as GuildTextBasedChannel
         this.client = client
         this.message = message
         this.msgId = message.id

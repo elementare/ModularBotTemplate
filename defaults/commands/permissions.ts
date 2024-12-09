@@ -9,7 +9,7 @@ import axios from "axios";
 import {parseToDatabase} from "../../util/parsingRelated";
 import {PermissionOverrideTree} from "../../types";
 
-function tryParseYAML(value: string): any {
+export function tryParseYAML(value: string): any {
     try {
         return yaml.parse(value);
     } catch (e) {
@@ -84,7 +84,7 @@ export default new SlashCommand({
                         continue;
                     }
                     for (const module of override.negar) {
-                        const data = translatedOverrides.getEndNode(module)
+                        const data = translatedOverrides.getEndNode(module, true)
                         if (!data) translatedOverrides.set(module, {
                             allow: [],
                             deny: [
@@ -97,7 +97,7 @@ export default new SlashCommand({
                         }
                     }
                     for (const module of override.permitir) {
-                        const data = translatedOverrides.getEndNode(module)
+                        const data = translatedOverrides.getEndNode(module, true)
                         if (!data) translatedOverrides.set(module, {
                             allow: [
                                 override.id

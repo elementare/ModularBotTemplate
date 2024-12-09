@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as winston from "winston";
 import {loadModules} from "./handlers/moduleHandler";
 import mongoose, {ConnectOptions} from "mongoose";
-import discord, {Collection, Partials} from "discord.js";
+import {Collection, Partials, Client} from "discord.js";
 import UserHandler from "./classes/managers/UserManager";
 import GuildHandler from "./classes/managers/GuildManager";
 import SlashManager from "./classes/managers/SlashManager";
@@ -17,6 +17,7 @@ import {FlagsManager} from "./classes/managers/FlagsManager";
 import chalk from "chalk";
 import {PermissionsManager} from "./classes/managers/PermissionsManager";
 import {ChannelsNamespace, RolesNamespace, UsersNamespace} from "./defaults/permissionNamespaces";
+import {sleep} from "./util/sleep";
 
 require('dotenv').config();
 
@@ -81,6 +82,7 @@ function createLogger(service: string, hexColor: string): winston.Logger {
 }
 
 const logger = createLogger('Main', '#aa00ff');
+/*
 logger.rejections.handle(
     new winston.transports.File({
         filename: 'logs/rejections-main.log',
@@ -93,7 +95,7 @@ logger.rejections.handle(
     }),
     new winston.transports.Console({
         format: winston.format.combine(
-            winston.format.colorize(),
+            //winston.format.colorize(),
             winston.format.label({label: path.basename(module.filename)}),
             winston.format.printf(info => `[${info.label} - ${info.level}] ${info.message}`),
             winston.format.splat()
@@ -111,12 +113,13 @@ logger.exceptions.handle(
     }),
     new winston.transports.Console({
         format: winston.format.combine(
-            winston.format.colorize(),
+            //winston.format.colorize(),
             winston.format.label({label: path.basename(module.filename)}),
             winston.format.printf(info => `[${info.label} - ${info.level}] ${info.message}`)
         )
     })
 );
+ */
 
 const settingsModel = mongoose.model('module settings', new mongoose.Schema({
     "module": {
@@ -135,7 +138,7 @@ const settingsModel = mongoose.model('module settings', new mongoose.Schema({
 export type settingData = typeof settingsModel
 
 logger.notice('Connecting to Discord...');
-const dClient = new discord.Client({intents: 131071, partials: [
+const dClient = new Client({intents: 131071, partials: [
     Partials.Channel
     ]});
 
@@ -156,7 +159,8 @@ dClient.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
             client.emit('dbReady');
         }).catch(err => {
             dbLogger.crit(err);
-            throw new Error(err);
+            //            throw new Error(err);
+            process.exit(2)
         });
         dbLogger.notice(`Db lock released`)
     })

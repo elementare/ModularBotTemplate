@@ -24,7 +24,7 @@ export type ControlStyle = Partial<{
     nextButton: ButtonBuilder,
     selectButton: ButtonBuilder
 }>
-
+type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 export async function createPaginator(view: AnyView, pages: Page[], flags?: PaginatorFlags[], controlStyle?: ControlStyle) {
     const paginator = new PaginatorComponent(view, pages, flags, undefined, controlStyle);
     if (flags?.includes(PaginatorFlags.AutoInit)) await paginator.init();
@@ -68,13 +68,15 @@ class PaginatorComponent extends EventEmitter {
     private addPaginationControls(page: Page) {
         if (page.hasControls) return page;
         page.hasControls = true;
-        const components = page.components ?? [];
+        const components = page.components ?? []
         this.buttons[0].setCustomId('previousPage');
         this.buttons[1].setCustomId('selectPage');
         this.buttons[2].setCustomId('nextPage');
         const row = new ActionRowBuilder<any>()
             .setComponents(this.buttons);
+        // @ts-ignore
         components.push(row)
+        // @ts-ignore
         page.components = components;
         return page
     }

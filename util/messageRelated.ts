@@ -17,7 +17,7 @@ export function waitForOneMessage<T extends boolean = false>(
         filter,
         errorOnNotCollected = false as T
     }: {
-        channel: TextBasedChannel,
+        channel: GuildTextBasedChannel,
         time?: number,
         filter?: (msg: Message) => boolean,
         errorOnNotCollected?: T

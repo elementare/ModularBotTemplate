@@ -36,7 +36,7 @@ export class Permissions {
         })
 
     }
-    get(permission: string) {
+    get(permission: string, strict: boolean = false) {
         const namespaces = permission.split('.')
         let current = this.permissions
         let lastGlobal: OverrideNode | undefined = undefined
@@ -57,6 +57,9 @@ export class Permissions {
             current = current.get(namespace) as PermissionOverrideTree
         }
         const finalTest = current as PermissionOverrideTree | OverrideNode | undefined
+        if (!finalTest && strict) {
+            return undefined
+        }
         if (!finalTest) {
             return lastGlobal // No specific permission set, so it uses the closest global one
         }
@@ -66,8 +69,8 @@ export class Permissions {
             return lastGlobal // No global permission set for that namespace scope
         }
     }
-    getEndNode(permission: string) {
-        const node = this.get(permission)
+    getEndNode(permission: string, strict?: boolean) {
+        const node = this.get(permission, strict)
         if (!node) return undefined
         if (isEndNode(node)) return node
         return undefined

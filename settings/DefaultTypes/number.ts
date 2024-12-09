@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import {InteractionView} from "../../utils/InteractionView";
 import {BaseSettingStructure, Setting} from "../Setting";
+import {IDoNotCareAboutPartialGroupDMs} from "../../types";
 
 export class NumberSettingFile implements Setting<number> {
     public type = 'number';
@@ -52,7 +53,7 @@ export class NumberSettingFile implements Setting<number> {
                 embeds: [embed],
                 components: [buttons]
             })
-            view.once('set', async (i: ButtonInteraction) => {
+            view.once('set', async (i: IDoNotCareAboutPartialGroupDMs<ButtonInteraction>) => {
                 await i.deferUpdate()
                 const embed = new EmbedBuilder()
                     .setTitle(`Configurar ${this.name}`)

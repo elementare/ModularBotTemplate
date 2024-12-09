@@ -1,7 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
 import {ExtendedClient} from "../../types";
-import Guild from "./Guild";
 import {HydratedDocument} from "mongoose";
 import {Logger} from "winston";
 
@@ -19,7 +18,7 @@ export class ObjectFlags {
         this.object = object
         this.logger = client.logger.child({service: `${object.id} Flags`, hexColor: '#aa00ff'})
     }
-    public set(flag: string, value: string | boolean) {
+    public set(flag: string, value: string | boolean | string[]) {
         if (!this.client.flags.flags.has(flag)) {
             this.logger.warning(`Flag ${flag} is not registered, ignoring`)
             return undefined
@@ -29,7 +28,7 @@ export class ObjectFlags {
         this.object.data.save()
         return this
     }
-    public awaitableSet(flag: string, value: string | boolean) {
+    public awaitableSet(flag: string, value: string | boolean | string[]) {
         return new Promise((resolve, reject) => {
             if (!this.client.flags.flags.has(flag)) {
                 this.logger.warning(`Flag ${flag} is not registered, ignoring`)
