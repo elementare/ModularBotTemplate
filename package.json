@@ -7,7 +7,7 @@
   "scripts": {
     "startDev": "ts-node index.ts",
     "start": "npm run build && cd dist && node index.js",
-    "build": "npm i && rm dist/* -rf && tsc",
+    "build": "npm i && del-cli dist && tsc",
     "postbuild": "copyfiles **/*.json **/*.txt .env -e *.json dist && del-cli \"dist/node_modules\" \"dist/dist\" \"dist/web\"",
     "postinstall": "node postinstall.mjs"
   },
