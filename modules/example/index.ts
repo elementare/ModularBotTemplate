@@ -18,7 +18,7 @@ module.exports = async (client: Client, _:any, logger: Logger): Promise<{
         constructor(logger: Logger) {
             logger.notice(`Interfacer initialized`);
         }
-
+        
     }(logger);
     const settings: Array<Setting<any>> = [
         new StringSettingFile({

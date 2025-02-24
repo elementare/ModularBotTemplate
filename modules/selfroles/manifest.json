@@ -1,0 +1,9 @@
+{
+  "name": "Registro",
+  "description": "Modulo de registro para discord",
+  "version": "1.0.0",
+  "initFile": "index.ts",
+  "color": "#f24383",
+  "eventsFolder": "events",
+  "commandsFolder": "commands"
+}

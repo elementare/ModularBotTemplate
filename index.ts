@@ -21,6 +21,14 @@ import {sleep} from "./util/sleep";
 
 require('dotenv').config();
 
+
+interface CustomLogInfo extends winston.Logform.TransformableInfo {
+    hexColor: string;
+    service: string;
+    label: string;
+    fallback?: boolean;
+}
+
 const file = fs.readFileSync('.env', 'utf8');
 if (!file) throw new Error('No .env file found or .env file is empty');
 if (!file.includes('DISCORD_TOKEN')) throw new Error('No DISCORD_TOKEN found in .env file');
@@ -73,7 +81,10 @@ function createLogger(service: string, hexColor: string): winston.Logger {
                 format: winston.format.combine(
                     winston.format.colorize(),
                     winston.format.label({label: path.basename(module.filename)}),
-                    winston.format.printf(info => `${info.fallback?chalk.red("FALLBACK") + " ":""}${chalk.hex(info.hexColor)(`(${info.service})`)} [${info.label} - ${info.level}] ${info.message}`),
+                    winston.format.printf((info) => {
+                        const customInfo = info as CustomLogInfo;
+                        return `${customInfo.fallback ? chalk.red("FALLBACK") + " " : ""}${chalk.hex(customInfo.hexColor)(`(${customInfo.service})`)} [${customInfo.label} - ${customInfo.level}] ${customInfo.message}`
+                    }),
                     winston.format.splat(),
                 )
             })
@@ -181,6 +192,7 @@ dClient.login(process.env.DISCORD_TOKEN).then(async (): Promise<void> => {
         })
     }).then(() => {
       logger.notice(`fullyReady lock released`)
+      client.emit('afterReady')
     })
     // @ts-ignore
     client.defaultModels = {

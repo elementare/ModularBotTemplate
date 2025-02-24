@@ -31,6 +31,9 @@ export function generateDecoderForEmbedJSON() {
     })
 }
 
+export function genRandomHexId(){
+
+}
 export function tryParseJSON(json: string): unknown {
     try {
         return JSON.parse(json)

@@ -33,13 +33,6 @@ function addRandomIdToButtons(rows: ActionRowBuilder[], id: string): any {
     })
 }
 
-/*
-* This class is a clone of MessageView but for interactions, it has support natively for ephemeral messages and supports being passed around without the need of a message
-* Do not use the class directly, use the CreateView function instead
-* This class is used to create a view for a message, views don't need to be sent, the class handles that
-* Every time there is an update the view is called and if changes are detected the message is updated
-* Events: delete, any interaction component customId (Ex: Button with customId "button" will emit "button")
- */
 export class InteractionView extends EventEmitter {
     public readonly interaction: RepliableInteraction;
     public readonly channel: GuildTextBasedChannel;

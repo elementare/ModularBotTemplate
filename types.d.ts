@@ -252,6 +252,7 @@ export interface ExtendedClientEvents extends ClientEvents {
     ];
     tick: [],
     fullyReady: [],
+    afterReady: [],
     dbReady: []
 }
 

@@ -1,0 +1,10 @@
+{
+    "name": "economy",
+    "description": "Módulo de economia",
+    "version": "1.0.0",
+    "schemaDataFile": "schemas.ts",
+    "initFile": "index.ts",
+    "color": "#ffaaff",
+    "commandsFolder": "commands",
+    "disabled": false
+  }
